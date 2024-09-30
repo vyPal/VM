@@ -53,7 +53,7 @@ func (mem *Memory) Write(addr uint16, val byte) {
 }
 
 func NewCPU() *CPU {
-  return &CPU{NewRegisters(), &Memory{memory.NewRandomAccessMemory(0x400), memory.NewReadOnlyMemory(nil)}, &LargeRegister{}, &LargeRegister{}, false, true}
+  return &CPU{NewRegisters(), &Memory{memory.NewRandomAccessMemory(0x8000), memory.NewReadOnlyMemory(nil)}, &LargeRegister{}, &LargeRegister{}, false, true}
 }
 
 func (cpu *CPU) StoreProgram(program []byte) {
@@ -69,6 +69,9 @@ func (cpu *CPU) StoreProgramInRAM(program []byte) {
 }
 
 func (cpu *CPU) Step() {
+  if cpu.Halt {
+    return
+  }
   inst := decode(cpu)
   if inst == nil {
     panic("Unknown instruction")
@@ -76,12 +79,6 @@ func (cpu *CPU) Step() {
   inst.Execute(cpu)
   if cpu.ShouldIncrement {
     cpu.PC.Increment()
-  }
-}
-
-func (cpu *CPU) Run() {
-  for !cpu.Halt {
-    cpu.Step()
   }
 }
 
