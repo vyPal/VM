@@ -68,6 +68,14 @@ func (cpu *CPU) StoreProgramInRAM(program []byte) {
   cpu.PC.Write(0x0000)
 }
 
+func (cpu *CPU) Reset() {
+  cpu.Reg.Reset()
+  cpu.ACC.Write(0)
+  cpu.PC.Write(0)
+  cpu.Halt = false
+  cpu.ShouldIncrement = true
+}
+
 func (cpu *CPU) Step() {
   if cpu.Halt {
     return
