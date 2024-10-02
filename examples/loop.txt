@@ -1,0 +1,36 @@
+.data
+	count 10
+	sub 1
+	zchar 0x30
+	ten 10
+	hundred 100
+.text
+	LD 0 count
+	LD 1 sub
+	LD 2 hundred
+	LD 3 ten
+	LD 4 zchar
+[loop]
+	SUB 0 1
+
+	ST 0 0x0000
+	DIV 0 2
+	ADD 0 4
+	ST 0 0x7C00
+	
+	LD 0 0x0000
+	MOD 0 2
+	DIV 0 3
+	ADD 0 4
+	ST 0 0x7C01
+
+	LD 0 0x0000
+	MOD 0 3
+	ADD 0 4
+	ST 0 0x7C02
+
+	LD 0 0x0000
+
+	JNZ loop
+
+	HLT

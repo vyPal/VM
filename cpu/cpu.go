@@ -8,7 +8,6 @@ import (
 type CPU struct {
   Reg *Registers
   Mem *Memory
-  ACC *LargeRegister
   PC *LargeRegister
   Halt bool
   ShouldIncrement bool
@@ -76,7 +75,7 @@ func (mem *Memory) Write(addr uint16, val byte) {
 }
 
 func NewCPU() *CPU {
-  return &CPU{NewRegisters(), &Memory{memory.NewRandomAccessMemory(0x8000), memory.NewReadOnlyMemory(nil)}, &LargeRegister{}, &LargeRegister{}, false, true, 0}
+  return &CPU{NewRegisters(), &Memory{memory.NewRandomAccessMemory(0x8000), memory.NewReadOnlyMemory(nil)}, &LargeRegister{}, false, true, 0}
 }
 
 func (cpu *CPU) StoreProgram(program []byte) {
@@ -93,7 +92,6 @@ func (cpu *CPU) StoreProgramInRAM(program []byte) {
 
 func (cpu *CPU) Reset() {
   cpu.Reg.Reset()
-  cpu.ACC.Write(0)
   cpu.PC.Write(0)
   cpu.Mem.RAM.Data = make([]byte, 0x8000)
   cpu.Mem.ROM = memory.NewReadOnlyMemory(nil)

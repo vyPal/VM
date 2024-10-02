@@ -23,7 +23,7 @@ type JZ struct {
 }
 
 func (op *JZ) Execute(cpu *CPU) error {
-  if cpu.ACC.Read() == 0 {
+  if cpu.Reg.A.Read() == 0 {
     cpu.PC.Write(op.Address)
     cpu.ShouldIncrement = false
   }
@@ -39,7 +39,7 @@ type JNZ struct {
 }
 
 func (op *JNZ) Execute(cpu *CPU) error {
-  if cpu.ACC.Read() != 0 {
+  if cpu.Reg.A.Read() != 0 {
     cpu.PC.Write(op.Address)
     cpu.ShouldIncrement = false
   }
@@ -55,7 +55,7 @@ type JG struct {
 }
 
 func (op *JG) Execute(cpu *CPU) error {
-  if cpu.ACC.Read() > 0 {
+  if cpu.Reg.A.Read() > 0 {
     cpu.PC.Write(op.Address)
     cpu.ShouldIncrement = false
   }
@@ -71,7 +71,7 @@ type JGE struct {
 }
 
 func (op *JGE) Execute(cpu *CPU) error {
-  if cpu.ACC.Read() >= 0 {
+  if cpu.Reg.A.Read() >= 0 {
     cpu.PC.Write(op.Address)
     cpu.ShouldIncrement = false
   }
@@ -87,7 +87,7 @@ type JL struct {
 }
 
 func (op *JL) Execute(cpu *CPU) error {
-  if cpu.ACC.Read() < 0 {
+  if cpu.Reg.A.Read() < 0 {
     cpu.PC.Write(op.Address)
     cpu.ShouldIncrement = false
   }
@@ -103,7 +103,7 @@ type JLE struct {
 }
 
 func (op *JLE) Execute(cpu *CPU) error {
-  if cpu.ACC.Read() <= 0 {
+  if cpu.Reg.A.Read() <= 0 {
     cpu.PC.Write(op.Address)
     cpu.ShouldIncrement = false
   }

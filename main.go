@@ -52,12 +52,14 @@ func main() {
     },
   }
 
-	if info, err := os.Stat("program.txt"); err == nil && !info.IsDir() {
-		data, err := os.ReadFile("program.txt")
-		if err != nil {
-			log.Fatalf("failed to read program.txt: %v", err)
+	if file := os.Args[1]; file != "" {
+		if info, err := os.Stat(file); err == nil && !info.IsDir() {
+			data, err := os.ReadFile(file)
+			if err != nil {
+				log.Fatalf("failed to read %s: %v", file, err)
+			}
+			program = assembly.ParseString(string(data))
 		}
-		program = assembly.ParseString(string(data))
 	}
 
   c.StoreProgram(program.Encode())

@@ -1,0 +1,31 @@
+.data
+	a 68
+	b 57
+	chprefix 0x30
+	c 10
+	d 100
+.text
+	LD 0 a
+	LD 1 b
+	ADD 0 1
+	ST 0 0x0000
+
+	LD 1 d
+	DIV 0 1
+	LD 2 chprefix
+	ADD 0 2
+	ST 0 0x7C00
+
+	LD 0 0x0000
+	MOD 0 1
+	LD 3 c
+	DIV 0 3
+	ADD 0 2
+	ST 0 0x7C01
+
+	LD 0 0x0000
+	MOD 0 3
+	ADD 0 2
+	ST 0 0x7C02
+
+	HLT
