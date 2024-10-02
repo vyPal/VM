@@ -3,10 +3,12 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	ui "github.com/gizak/termui/v3"
 	"github.com/gizak/termui/v3/widgets"
+	"src.vypal.me/vyPal/VM/assembly"
 	"src.vypal.me/vyPal/VM/cpu"
 )
 
@@ -49,6 +51,14 @@ func main() {
       &cpu.HLT{},
     },
   }
+
+	if info, err := os.Stat("program.txt"); err == nil && !info.IsDir() {
+		data, err := os.ReadFile("program.txt")
+		if err != nil {
+			log.Fatalf("failed to read program.txt: %v", err)
+		}
+		program = assembly.ParseString(string(data))
+	}
 
   c.StoreProgram(program.Encode())
 
