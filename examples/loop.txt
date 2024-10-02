@@ -10,6 +10,11 @@
 	LD 2 hundred
 	LD 3 ten
 	LD 4 zchar
+	JMP loop
+
+[end]
+	HLT
+
 [loop]
 	SUB 0 1
 
@@ -32,5 +37,4 @@
 	LD 0 0x0000
 
 	JNZ loop
-
-	HLT
+	JMP end

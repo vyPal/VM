@@ -23,5 +23,7 @@ const (
   JGE
   JL
   JLE
+  CALL
+  RET
   HLT
 )

@@ -64,7 +64,7 @@ func main() {
 
   c.StoreProgram(program.Encode())
 
-	simulationDelay := 1000 // ms per instruction
+	simulationDelay := 100 // ms per instruction
 
   if err := ui.Init(); err != nil {
 		log.Fatalf("failed to initialize termui: %v", err)
@@ -170,7 +170,7 @@ func drawMemoryWindow(mem *cpu.Memory, programCounter uint16) string {
 	var memoryWindow string
 	for i := programCounter - uint16(linesBefore); i < programCounter + uint16(linesAfter); i++ {
 		if i == programCounter {
-			opcodes := []string{"LD", "ST", "ADD", "SUB", "MUL", "DIV", "MOD", "AND", "OR", "XOR", "NOT", "SHL", "SHR", "JMP", "JZ", "JNZ", "JG", "JGE", "JL", "JLE", "HLT"}
+			opcodes := []string{"LD", "ST", "ADD", "SUB", "MUL", "DIV", "MOD", "AND", "OR", "XOR", "NOT", "SHL", "SHR", "JMP", "JZ", "JNZ", "JG", "JGE", "JL", "JLE", "CALL", "RET", "HLT"}
 			memoryWindow += fmt.Sprintf(">%04x: %02x %s\n", i, mem.Read(i), opcodes[mem.Read(i)])
 		} else {
 			memoryWindow += fmt.Sprintf(" %04x: %02x\n", i, mem.Read(i))

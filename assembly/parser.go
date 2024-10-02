@@ -19,6 +19,8 @@ func ParseString(s string) cpu.Program {
 	instr := []cpu.Instruction{}
 	labels := map[string]uint16{}
 
+	afterDone := []func(){}
+
 	consts := &cpu.ListDataBlock{}
 
 	for _, line := range lines {
@@ -283,92 +285,114 @@ func ParseString(s string) cpu.Program {
 					}
 					i1, err := strconv.ParseInt(params[0], 0, 32)
 					if err != nil {
-						if val, ok := labels[params[0]]; ok {
-							i1 = int64(val)
-						} else {
-							panic("Invalid JMP")
-						}
+						inst := &cpu.JMP{}
+						afterDone = append(afterDone, func() {
+							inst.Address = labels[params[0]]
+						})
+						instr = append(instr, inst)
+					} else {
+						instr = append(instr, &cpu.JMP{Address: uint16(i1)})
 					}
-					instr = append(instr, &cpu.JMP{Address: uint16(i1)})
 				case "JZ":
 					if len(params) != 1 {
 						panic("Invalid JZ")
 					}
 					i1, err := strconv.ParseInt(params[0], 0, 32)
 					if err != nil {
-						if val, ok := labels[params[0]]; ok {
-							i1 = int64(val)
-						} else {
-							panic("Invalid JZ")
-						}
-
+						inst := &cpu.JZ{}
+						afterDone = append(afterDone, func() {
+							inst.Address = labels[params[0]]
+						})
+						instr = append(instr, inst)
+					} else {
+						instr = append(instr, &cpu.JZ{Address: uint16(i1)})
 					}
-					instr = append(instr, &cpu.JZ{Address: uint16(i1)})
 				case "JNZ":
 					if len(params) != 1 {
 						panic("Invalid JNZ")
 					}
 					i1, err := strconv.ParseInt(params[0], 0, 32)
 					if err != nil {
-						if val, ok := labels[params[0]]; ok {
-							i1 = int64(val)
-						} else {
-							panic("Invalid JNZ")
-						}
+						inst := &cpu.JNZ{}
+						afterDone = append(afterDone, func() {
+							inst.Address = labels[params[0]]
+						})
+						instr = append(instr, inst)
+					} else {
+						instr = append(instr, &cpu.JNZ{Address: uint16(i1)})
 					}
-					instr = append(instr, &cpu.JNZ{Address: uint16(i1)})
 				case "JG":
 					if len(params) != 1 {
 						panic("Invalid JG")
 					}
 					i1, err := strconv.ParseInt(params[0], 0, 32)
 					if err != nil {
-						if val, ok := labels[params[0]]; ok {
-							i1 = int64(val)
-						} else {
-							panic("Invalid JG")
-						}
+						inst := &cpu.JG{}
+						afterDone = append(afterDone, func() {
+							inst.Address = labels[params[0]]
+						})
+						instr = append(instr, inst)
+					} else {
+						instr = append(instr, &cpu.JG{Address: uint16(i1)})
 					}
-					instr = append(instr, &cpu.JG{Address: uint16(i1)})
 				case "JGE":
 					if len(params) != 1 {
 						panic("Invalid JGE")
 					}
 					i1, err := strconv.ParseInt(params[0], 0, 32)
 					if err != nil {
-						if val, ok := labels[params[0]]; ok {
-							i1 = int64(val)
-						} else {
-							panic("Invalid JGE")
-						}
+						inst := &cpu.JGE{}
+						afterDone = append(afterDone, func() {
+							inst.Address = labels[params[0]]
+						})
+						instr = append(instr, inst)
+					} else {
+						instr = append(instr, &cpu.JGE{Address: uint16(i1)})
 					}
-					instr = append(instr, &cpu.JGE{Address: uint16(i1)})
 				case "JL":
 					if len(params) != 1 {
 						panic("Invalid JL")
 					}
 					i1, err := strconv.ParseInt(params[0], 0, 32)
 					if err != nil {
-						if val, ok := labels[params[0]]; ok {
-							i1 = int64(val)
-						} else {
-							panic("Invalid JJ")
-						}
+						inst := &cpu.JL{}
+						afterDone = append(afterDone, func() {
+							inst.Address = labels[params[0]]
+						})
+						instr = append(instr, inst)
+					} else {
+						instr = append(instr, &cpu.JL{Address: uint16(i1)})
 					}
-					instr = append(instr, &cpu.JL{Address: uint16(i1)})
 				case "JLE":
 					if len(params) != 1 {
 						panic("Invalid JLE")
 					}
 					i1, err := strconv.ParseInt(params[0], 0, 32)
 					if err != nil {
-						if val, ok := labels[params[0]]; ok {
-							i1 = int64(val)
-						} else {
-							panic("Invalid JLE")
-						}
+						inst := &cpu.JLE{}
+						afterDone = append(afterDone, func() {
+							inst.Address = labels[params[0]]
+						})
+						instr = append(instr, inst)
+					} else {
+						instr = append(instr, &cpu.JLE{Address: uint16(i1)})
 					}
-					instr = append(instr, &cpu.JLE{Address: uint16(i1)})
+				case "CALL":
+					if len(params) != 1 {
+						panic("Invalid CALL")
+					}
+					i1, err := strconv.ParseInt(params[0], 0, 32)
+					if err != nil {
+						inst := &cpu.CALL{}
+						afterDone = append(afterDone, func() {
+							inst.Address = labels[params[0]]
+						})
+						instr = append(instr, inst)
+					} else {
+						instr = append(instr, &cpu.CALL{Address: uint16(i1)})
+					}
+				case "RET":
+					instr = append(instr, &cpu.RET{})
 				default:
 					panic("Unknown instruction "+inst)
 			  }
@@ -377,6 +401,11 @@ func ParseString(s string) cpu.Program {
 			}
 		}
 	}
+
+	for _, v := range afterDone {
+		v()
+	}
+
 	return cpu.Program{
 		DataBlock: consts,
 		Instructions: instr,

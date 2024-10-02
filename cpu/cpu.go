@@ -9,9 +9,24 @@ type CPU struct {
   Reg *Registers
   Mem *Memory
   PC *LargeRegister
+  Stack *LiFo
   Halt bool
   ShouldIncrement bool
   LastAccessedAddress uint16
+}
+
+type LiFo struct {
+  Data []uint16
+}
+
+func (l *LiFo) Push(val uint16) {
+  l.Data = append(l.Data, val)
+}
+
+func (l *LiFo) Pop() uint16 {
+  val := l.Data[len(l.Data) - 1]
+  l.Data = l.Data[:len(l.Data) - 1]
+  return val
 }
 
 type Memory struct {
@@ -75,7 +90,7 @@ func (mem *Memory) Write(addr uint16, val byte) {
 }
 
 func NewCPU() *CPU {
-  return &CPU{NewRegisters(), &Memory{memory.NewRandomAccessMemory(0x8000), memory.NewReadOnlyMemory(nil)}, &LargeRegister{}, false, true, 0}
+  return &CPU{NewRegisters(), &Memory{memory.NewRandomAccessMemory(0x8000), memory.NewReadOnlyMemory(nil)}, &LargeRegister{}, &LiFo{}, false, true, 0}
 }
 
 func (cpu *CPU) StoreProgram(program []byte) {
@@ -207,6 +222,12 @@ func decode(cpu *CPU) Instruction {
         Register1: cpu.Reg.Get(cpu.Mem.Read(cpu.PC.Increment())),
         Register2: cpu.Reg.Get(cpu.Mem.Read(cpu.PC.Increment())),
       }
+    case byte(opcodes.CALL):
+      return &CALL{
+        Address: uint16(cpu.Mem.Read(cpu.PC.Increment())) << 8 | uint16(cpu.Mem.Read(cpu.PC.Increment())),
+      }
+    case byte(opcodes.RET):
+      return &RET{}
     case byte(opcodes.HLT):
       return &HLT{}
   }

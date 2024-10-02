@@ -114,6 +114,34 @@ func (op *JLE) Encode() []byte {
   return []byte{byte(opcodes.JLE), byte(op.Address >> 8), byte(op.Address)}
 }
 
+type CALL struct {
+  Address uint16
+}
+
+func (op *CALL) Execute(cpu *CPU) error {
+  cpu.Stack.Push(cpu.PC.Read())
+  cpu.PC.Write(op.Address)
+  cpu.ShouldIncrement = false
+  return nil
+}
+
+func (op *CALL) Encode() []byte {
+  return []byte{byte(opcodes.CALL), byte(op.Address >> 8), byte(op.Address)}
+}
+
+type RET struct {
+}
+
+func (op *RET) Execute(cpu *CPU) error {
+  cpu.PC.Write(cpu.Stack.Pop())
+  cpu.ShouldIncrement = false
+  return nil
+}
+
+func (op *RET) Encode() []byte {
+  return []byte{byte(opcodes.RET)}
+}
+
 type HLT struct {
 }
 
