@@ -7,6 +7,9 @@ const (
   ST
   ADD
   SUB
+  MUL
+  DIV
+  MOD
   AND
   OR
   XOR

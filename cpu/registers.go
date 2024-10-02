@@ -29,6 +29,18 @@ func (r *Register) Subtract(val byte) {
   r.value -= val
 }
 
+func (r *Register) Multiply(val byte) {
+  r.value *= val
+}
+
+func (r *Register) Divide(val byte) {
+  r.value /= val
+}
+
+func (r *Register) Modulo(val byte) {
+  r.value %= val
+}
+
 func (r *Register) And(val byte) {
   r.value &= val
 }

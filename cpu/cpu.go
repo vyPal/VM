@@ -191,6 +191,21 @@ func decode(cpu *CPU) Instruction {
         Register1: cpu.Reg.Get(cpu.Mem.Read(cpu.PC.Increment())),
         Register2: cpu.Reg.Get(cpu.Mem.Read(cpu.PC.Increment())),
       }
+    case byte(opcodes.MUL):
+      return &MUL{
+        Register1: cpu.Reg.Get(cpu.Mem.Read(cpu.PC.Increment())),
+        Register2: cpu.Reg.Get(cpu.Mem.Read(cpu.PC.Increment())),
+      }
+    case byte(opcodes.DIV):
+      return &DIV{
+        Register1: cpu.Reg.Get(cpu.Mem.Read(cpu.PC.Increment())),
+        Register2: cpu.Reg.Get(cpu.Mem.Read(cpu.PC.Increment())),
+      }
+    case byte(opcodes.MOD):
+      return &MOD{
+        Register1: cpu.Reg.Get(cpu.Mem.Read(cpu.PC.Increment())),
+        Register2: cpu.Reg.Get(cpu.Mem.Read(cpu.PC.Increment())),
+      }
     case byte(opcodes.HLT):
       return &HLT{}
   }
