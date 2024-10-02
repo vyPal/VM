@@ -15,7 +15,7 @@ func main() {
 
 	constantBlock := &cpu.ListDataBlock{
 		Data: []byte{
-			4, 3, 0x30,
+			100, 23, 0x30, 10, 100,
 		},
 	}
 
@@ -25,9 +25,29 @@ func main() {
       &cpu.LD{Register: c.Reg.A, Address: constantBlock.GetAddr(0)}, // Load the value at address 0x0001 into register A
       &cpu.LD{Register: c.Reg.B, Address: constantBlock.GetAddr(1)}, // Load the value at address 0x0002 into register B
       &cpu.ADD{Register1: c.Reg.A, Register2: c.Reg.B}, // Add the value in register B to the value in register A
-			&cpu.LD{Register: c.Reg.B, Address: constantBlock.GetAddr(2)}, // Load the value at address 0x0004 into register B
-			&cpu.ADD{Register1: c.Reg.A, Register2: c.Reg.B}, // Add the value in register B to the value in register A
-			&cpu.ST{Register: c.Reg.A, Address: 0x7C00}, // Store the value in register A at address 0x0005
+			&cpu.ST{Register: c.Reg.A, Address: 0x0000}, // Store the result in register A at address 0x0000
+			// Get first digit of the result (max 3 digits) and display into video buffer
+			&cpu.LD{Register: c.Reg.B, Address: constantBlock.GetAddr(4)},
+			&cpu.DIV{Register1: c.Reg.A, Register2: c.Reg.B},
+			&cpu.LD{Register: c.Reg.B, Address: constantBlock.GetAddr(2)},
+			&cpu.ADD{Register1: c.Reg.A, Register2: c.Reg.B},
+			&cpu.ST{Register: c.Reg.A, Address: 0x7C00},
+			// Get second digit of the result (max 3 digits) and display into video buffer
+			&cpu.LD{Register: c.Reg.A, Address: 0x0000},
+			&cpu.LD{Register: c.Reg.B, Address: constantBlock.GetAddr(4)},
+			&cpu.MOD{Register1: c.Reg.A, Register2: c.Reg.B},
+			&cpu.LD{Register: c.Reg.B, Address: constantBlock.GetAddr(3)},
+			&cpu.DIV{Register1: c.Reg.A, Register2: c.Reg.B},
+			&cpu.LD{Register: c.Reg.B, Address: constantBlock.GetAddr(2)},
+			&cpu.ADD{Register1: c.Reg.A, Register2: c.Reg.B},
+			&cpu.ST{Register: c.Reg.A, Address: 0x7C01},
+			// Get third digit of the result (max 3 digits) and display into video buffer
+			&cpu.LD{Register: c.Reg.A, Address: 0x0000},
+			&cpu.LD{Register: c.Reg.B, Address: constantBlock.GetAddr(3)},
+			&cpu.MOD{Register1: c.Reg.A, Register2: c.Reg.B},
+			&cpu.LD{Register: c.Reg.B, Address: constantBlock.GetAddr(2)},
+			&cpu.ADD{Register1: c.Reg.A, Register2: c.Reg.B},
+			&cpu.ST{Register: c.Reg.A, Address: 0x7C02},
       &cpu.HLT{},
     },
   }
