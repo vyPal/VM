@@ -94,6 +94,8 @@ func (cpu *CPU) Reset() {
   cpu.Reg.Reset()
   cpu.ACC.Write(0)
   cpu.PC.Write(0)
+  cpu.Mem.RAM.Data = make([]byte, 0x8000)
+  cpu.Mem.ROM = memory.NewReadOnlyMemory(nil)
   cpu.Halt = false
   cpu.ShouldIncrement = true
 }
