@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"slices"
 	"time"
 
 	ui "github.com/gizak/termui/v3"
@@ -92,7 +93,11 @@ func main() {
 	accessWindow.Title = "Access"
 	accessWindow.SetRect(58, 10, 72, 27)
 
-	ui.Render(p, regDump, simInfo, memoryWindow, accessWindow)
+	stackWindow := widgets.NewParagraph()
+	stackWindow.Title = "Stack"
+	stackWindow.SetRect(72, 0, 90, 27)
+
+	ui.Render(p, regDump, simInfo, memoryWindow, accessWindow, stackWindow)
 
 	run := false
 
@@ -142,7 +147,11 @@ func main() {
 
 			memoryWindow.Text = drawMemoryWindow(c.Mem, c.PC.Read())
 			accessWindow.Text = drawAccessWindow(c.Mem, c.LastAccessedAddress)
-			ui.Render(p, regDump, simInfo, memoryWindow, accessWindow)
+			stackWindow.Text = ""
+			for _, v := range slices.Backward(c.Stack.Data) {
+				stackWindow.Text += fmt.Sprintf("%04x\n", v)
+			}
+			ui.Render(p, regDump, simInfo, memoryWindow, accessWindow, stackWindow)
 		}
 	}
 }

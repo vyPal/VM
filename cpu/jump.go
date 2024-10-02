@@ -134,7 +134,6 @@ type RET struct {
 
 func (op *RET) Execute(cpu *CPU) error {
   cpu.PC.Write(cpu.Stack.Pop())
-  cpu.ShouldIncrement = false
   return nil
 }
 
