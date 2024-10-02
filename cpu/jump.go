@@ -119,6 +119,7 @@ type HLT struct {
 
 func (op *HLT) Execute(cpu *CPU) error {
   cpu.Halt = true
+  cpu.ShouldIncrement = false
   return nil
 }
 

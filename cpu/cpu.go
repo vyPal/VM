@@ -12,6 +12,7 @@ type CPU struct {
   PC *LargeRegister
   Halt bool
   ShouldIncrement bool
+  LastAccessedAddress uint16
 }
 
 type Memory struct {
@@ -75,7 +76,7 @@ func (mem *Memory) Write(addr uint16, val byte) {
 }
 
 func NewCPU() *CPU {
-  return &CPU{NewRegisters(), &Memory{memory.NewRandomAccessMemory(0x8000), memory.NewReadOnlyMemory(nil)}, &LargeRegister{}, &LargeRegister{}, false, true}
+  return &CPU{NewRegisters(), &Memory{memory.NewRandomAccessMemory(0x8000), memory.NewReadOnlyMemory(nil)}, &LargeRegister{}, &LargeRegister{}, false, true, 0}
 }
 
 func (cpu *CPU) StoreProgram(program []byte) {

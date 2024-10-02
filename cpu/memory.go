@@ -11,6 +11,7 @@ type LD struct {
 
 func (op *LD) Execute(cpu *CPU) error {
   op.Register.Write(cpu.Mem.Read(op.Address))
+  cpu.LastAccessedAddress = op.Address
   return nil
 }
 
@@ -25,6 +26,7 @@ type ST struct {
 
 func (op *ST) Execute(cpu *CPU) error {
   cpu.Mem.Write(op.Address, op.Register.Read())
+  cpu.LastAccessedAddress = op.Address
   return nil
 }
 
