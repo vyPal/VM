@@ -13,12 +13,19 @@ import (
 func main() {
   c := cpu.NewCPU()
 
+	constantBlock := &cpu.ListDataBlock{
+		Data: []byte{
+			4, 3, 0x30,
+		},
+	}
+
   program := cpu.Program{
+		DataBlock: constantBlock,
     Instructions: []cpu.Instruction{
-      &cpu.LD{Register: c.Reg.A, Address: 0x0001}, // Load the value at address 0x0001 into register A
-      &cpu.LD{Register: c.Reg.B, Address: 0x0002}, // Load the value at address 0x0002 into register B
+      &cpu.LD{Register: c.Reg.A, Address: constantBlock.GetAddr(0)}, // Load the value at address 0x0001 into register A
+      &cpu.LD{Register: c.Reg.B, Address: constantBlock.GetAddr(1)}, // Load the value at address 0x0002 into register B
       &cpu.ADD{Register1: c.Reg.A, Register2: c.Reg.B}, // Add the value in register B to the value in register A
-			&cpu.LD{Register: c.Reg.B, Address: 0x0003}, // Load the value at address 0x0004 into register B
+			&cpu.LD{Register: c.Reg.B, Address: constantBlock.GetAddr(2)}, // Load the value at address 0x0004 into register B
 			&cpu.ADD{Register1: c.Reg.A, Register2: c.Reg.B}, // Add the value in register B to the value in register A
 			&cpu.ST{Register: c.Reg.A, Address: 0x7C00}, // Store the value in register A at address 0x0005
       &cpu.HLT{},
@@ -26,10 +33,6 @@ func main() {
   }
 
   c.StoreProgram(program.Encode())
-
-  c.Mem.Write(0x0001, 0x04)
-  c.Mem.Write(0x0002, 0x03)
-	c.Mem.Write(0x0003, 0x30) // 0 in ASCII
 
 	simulationDelay := 1000 // ms per instruction
 

@@ -24,12 +24,34 @@ type Instruction interface {
   Encode() []byte
 }
 
+type DataBlock interface {
+  Encode() []byte
+}
+
+type ListDataBlock struct {
+  Data []byte
+}
+
+func (l *ListDataBlock) Encode() []byte {
+  return l.Data
+}
+
+func (l *ListDataBlock) GetAddr(id int) uint16 {
+  return 0x8000 + 0x3 + uint16(id)
+}
+
 type Program struct {
+  DataBlock DataBlock
   Instructions []Instruction
 }
 
 func (p *Program) Encode() []byte {
   var encoded []byte
+  if p.DataBlock != nil {
+    jmp := JMP{Address: uint16(0x8000 + 0x3 + len(p.DataBlock.Encode()))}
+    encoded = append(encoded, jmp.Encode()...)
+    encoded = append(encoded, p.DataBlock.Encode()...)
+  }
   for _, inst := range p.Instructions {
     encoded = append(encoded, inst.Encode()...)
   }
@@ -84,6 +106,7 @@ func (cpu *CPU) Step() {
   if inst == nil {
     panic("Unknown instruction")
   }
+  cpu.ShouldIncrement = true
   inst.Execute(cpu)
   if cpu.ShouldIncrement {
     cpu.PC.Increment()
