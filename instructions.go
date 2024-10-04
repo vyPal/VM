@@ -93,6 +93,7 @@ var instructionSet = map[uint8]*Instruction{
           cpu.Registers[r.RegNum] = uint32(uint8(cpu.Registers[operands[1].Value.(*RegOperand).RegNum]))
         }
       case DMem:
+        cpu.LastAccessedAddress = operands[1].Value.(*DMemOperand).Addr
         if r.Size == 0x0 {
           cpu.Registers[r.RegNum] = cpu.Memory.ReadDWord(operands[1].Value.(*DMemOperand).Addr)
         } else if r.Size == 0x1 {
@@ -101,6 +102,7 @@ var instructionSet = map[uint8]*Instruction{
           cpu.Registers[r.RegNum] = uint32(cpu.Memory.Read(operands[1].Value.(*DMemOperand).Addr))
         }
       case IMem:
+        cpu.LastAccessedAddress = operands[1].Value.(*IMemOperand).Addr
         if r.Size == 0x0 {
           cpu.Registers[r.RegNum] = cpu.Memory.ReadDWord(operands[1].Value.(*IMemOperand).Addr)
         } else if r.Size == 0x1 {
@@ -129,6 +131,7 @@ var instructionSet = map[uint8]*Instruction{
     Execute: func(cpu *CPU, operands []Operand) {
       switch operands[0].Type {
       case DMem:
+        cpu.LastAccessedAddress = operands[0].Value.(*DMemOperand).Addr
         r := operands[1].Value.(*RegOperand)
         if r.Size == 0x0 {
           cpu.Memory.WriteDWord(operands[0].Value.(*DMemOperand).Addr, cpu.Registers[r.RegNum])
@@ -138,6 +141,7 @@ var instructionSet = map[uint8]*Instruction{
           cpu.Memory.Write(operands[0].Value.(*DMemOperand).Addr, uint8(cpu.Registers[r.RegNum]))
         }
       case IMem:
+        cpu.LastAccessedAddress = operands[0].Value.(*IMemOperand).Addr
         r := operands[1].Value.(*RegOperand)
         if r.Size == 0x0 {
           cpu.Memory.WriteDWord(operands[0].Value.(*IMemOperand).Addr, cpu.Registers[r.RegNum])
@@ -168,6 +172,7 @@ var instructionSet = map[uint8]*Instruction{
           cpu.Registers[r.RegNum] += uint32(uint8(cpu.Registers[operands[1].Value.(*RegOperand).RegNum]))
         }
       case DMem:
+        cpu.LastAccessedAddress = operands[1].Value.(*DMemOperand).Addr
         if r.Size == 0x0 {
           cpu.Registers[r.RegNum] += cpu.Memory.ReadDWord(operands[1].Value.(*DMemOperand).Addr)
         } else if r.Size == 0x1 {
@@ -176,6 +181,7 @@ var instructionSet = map[uint8]*Instruction{
           cpu.Registers[r.RegNum] += uint32(cpu.Memory.Read(operands[1].Value.(*DMemOperand).Addr))
         }
       case IMem:
+        cpu.LastAccessedAddress = operands[1].Value.(*IMemOperand).Addr
         if r.Size == 0x0 {
           cpu.Registers[r.RegNum] += cpu.Memory.ReadDWord(operands[1].Value.(*IMemOperand).Addr)
         } else if r.Size == 0x1 {
@@ -213,6 +219,7 @@ var instructionSet = map[uint8]*Instruction{
           cpu.Registers[r.RegNum] -= uint32(uint8(cpu.Registers[operands[1].Value.(*RegOperand).RegNum]))
         }
       case DMem:
+        cpu.LastAccessedAddress = operands[1].Value.(*DMemOperand).Addr
         if r.Size == 0x0 {
           cpu.Registers[r.RegNum] -= cpu.Memory.ReadDWord(operands[1].Value.(*DMemOperand).Addr)
         } else if r.Size == 0x1 {
@@ -221,6 +228,7 @@ var instructionSet = map[uint8]*Instruction{
           cpu.Registers[r.RegNum] -= uint32(cpu.Memory.Read(operands[1].Value.(*DMemOperand).Addr))
         }
       case IMem:
+        cpu.LastAccessedAddress = operands[1].Value.(*IMemOperand).Addr
         if r.Size == 0x0 {
           cpu.Registers[r.RegNum] -= cpu.Memory.ReadDWord(operands[1].Value.(*IMemOperand).Addr)
         } else if r.Size == 0x1 {
@@ -258,6 +266,7 @@ var instructionSet = map[uint8]*Instruction{
           cpu.Registers[r.RegNum] *= uint32(uint8(cpu.Registers[operands[1].Value.(*RegOperand).RegNum]))
         }
       case DMem:
+        cpu.LastAccessedAddress = operands[1].Value.(*DMemOperand).Addr
         if r.Size == 0x0 {
           cpu.Registers[r.RegNum] *= cpu.Memory.ReadDWord(operands[1].Value.(*DMemOperand).Addr)
         } else if r.Size == 0x1 {
@@ -266,6 +275,7 @@ var instructionSet = map[uint8]*Instruction{
           cpu.Registers[r.RegNum] *= uint32(cpu.Memory.Read(operands[1].Value.(*DMemOperand).Addr))
         }
       case IMem:
+        cpu.LastAccessedAddress = operands[1].Value.(*IMemOperand).Addr
         if r.Size == 0x0 {
           cpu.Registers[r.RegNum] *= cpu.Memory.ReadDWord(operands[1].Value.(*IMemOperand).Addr)
         } else if r.Size == 0x1 {
@@ -303,6 +313,7 @@ var instructionSet = map[uint8]*Instruction{
           cpu.Registers[r.RegNum] /= uint32(uint8(cpu.Registers[operands[1].Value.(*RegOperand).RegNum]))
         }
       case DMem:
+        cpu.LastAccessedAddress = operands[1].Value.(*DMemOperand).Addr
         if r.Size == 0x0 {
           cpu.Registers[r.RegNum] /= cpu.Memory.ReadDWord(operands[1].Value.(*DMemOperand).Addr)
         } else if r.Size == 0x1 {
@@ -311,6 +322,7 @@ var instructionSet = map[uint8]*Instruction{
           cpu.Registers[r.RegNum] /= uint32(cpu.Memory.Read(operands[1].Value.(*DMemOperand).Addr))
         }
       case IMem:
+        cpu.LastAccessedAddress = operands[1].Value.(*IMemOperand).Addr
         if r.Size == 0x0 {
           cpu.Registers[r.RegNum] /= cpu.Memory.ReadDWord(operands[1].Value.(*IMemOperand).Addr)
         } else if r.Size == 0x1 {
@@ -348,6 +360,7 @@ var instructionSet = map[uint8]*Instruction{
           cpu.Registers[r.RegNum] %= uint32(uint8(cpu.Registers[operands[1].Value.(*RegOperand).RegNum]))
         }
       case DMem:
+        cpu.LastAccessedAddress = operands[1].Value.(*DMemOperand).Addr
         if r.Size == 0x0 {
           cpu.Registers[r.RegNum] %= cpu.Memory.ReadDWord(operands[1].Value.(*DMemOperand).Addr)
         } else if r.Size == 0x1 {
@@ -356,6 +369,7 @@ var instructionSet = map[uint8]*Instruction{
           cpu.Registers[r.RegNum] %= uint32(cpu.Memory.Read(operands[1].Value.(*DMemOperand).Addr))
         }
       case IMem:
+        cpu.LastAccessedAddress = operands[1].Value.(*IMemOperand).Addr
         if r.Size == 0x0 {
           cpu.Registers[r.RegNum] %= cpu.Memory.ReadDWord(operands[1].Value.(*IMemOperand).Addr)
         } else if r.Size == 0x1 {
@@ -393,6 +407,7 @@ var instructionSet = map[uint8]*Instruction{
           cpu.Registers[r.RegNum] &= uint32(uint8(cpu.Registers[operands[1].Value.(*RegOperand).RegNum]))
         }
       case DMem:
+        cpu.LastAccessedAddress = operands[1].Value.(*DMemOperand).Addr
         if r.Size == 0x0 {
           cpu.Registers[r.RegNum] &= cpu.Memory.ReadDWord(operands[1].Value.(*DMemOperand).Addr)
         } else if r.Size == 0x1 {
@@ -401,6 +416,7 @@ var instructionSet = map[uint8]*Instruction{
           cpu.Registers[r.RegNum] &= uint32(cpu.Memory.Read(operands[1].Value.(*DMemOperand).Addr))
         }
       case IMem:
+        cpu.LastAccessedAddress = operands[1].Value.(*IMemOperand).Addr
         if r.Size == 0x0 {
           cpu.Registers[r.RegNum] &= cpu.Memory.ReadDWord(operands[1].Value.(*IMemOperand).Addr)
         } else if r.Size == 0x1 {
@@ -438,6 +454,7 @@ var instructionSet = map[uint8]*Instruction{
           cpu.Registers[r.RegNum] |= uint32(uint8(cpu.Registers[operands[1].Value.(*RegOperand).RegNum]))
         }
       case DMem:
+        cpu.LastAccessedAddress = operands[1].Value.(*DMemOperand).Addr
         if r.Size == 0x0 {
           cpu.Registers[r.RegNum] |= cpu.Memory.ReadDWord(operands[1].Value.(*DMemOperand).Addr)
         } else if r.Size == 0x1 {
@@ -446,6 +463,7 @@ var instructionSet = map[uint8]*Instruction{
           cpu.Registers[r.RegNum] |= uint32(cpu.Memory.Read(operands[1].Value.(*DMemOperand).Addr))
         }
       case IMem:
+        cpu.LastAccessedAddress = operands[1].Value.(*IMemOperand).Addr
         if r.Size == 0x0 {
           cpu.Registers[r.RegNum] |= cpu.Memory.ReadDWord(operands[1].Value.(*IMemOperand).Addr)
         } else if r.Size == 0x1 {
@@ -483,6 +501,7 @@ var instructionSet = map[uint8]*Instruction{
           cpu.Registers[r.RegNum] ^= uint32(uint8(cpu.Registers[operands[1].Value.(*RegOperand).RegNum]))
         }
       case DMem:
+        cpu.LastAccessedAddress = operands[1].Value.(*DMemOperand).Addr
         if r.Size == 0x0 {
           cpu.Registers[r.RegNum] ^= cpu.Memory.ReadDWord(operands[1].Value.(*DMemOperand).Addr)
         } else if r.Size == 0x1 {
@@ -491,6 +510,7 @@ var instructionSet = map[uint8]*Instruction{
           cpu.Registers[r.RegNum] ^= uint32(cpu.Memory.Read(operands[1].Value.(*DMemOperand).Addr))
         }
       case IMem:
+        cpu.LastAccessedAddress = operands[1].Value.(*IMemOperand).Addr
         if r.Size == 0x0 {
           cpu.Registers[r.RegNum] ^= cpu.Memory.ReadDWord(operands[1].Value.(*IMemOperand).Addr)
         } else if r.Size == 0x1 {
@@ -545,6 +565,7 @@ var instructionSet = map[uint8]*Instruction{
           cpu.Registers[r.RegNum] <<= uint32(uint8(cpu.Registers[operands[1].Value.(*RegOperand).RegNum]))
         }
       case DMem:
+        cpu.LastAccessedAddress = operands[1].Value.(*DMemOperand).Addr
         if r.Size == 0x0 {
           cpu.Registers[r.RegNum] <<= cpu.Memory.ReadDWord(operands[1].Value.(*DMemOperand).Addr)
         } else if r.Size == 0x1 {
@@ -553,6 +574,7 @@ var instructionSet = map[uint8]*Instruction{
           cpu.Registers[r.RegNum] <<= uint32(cpu.Memory.Read(operands[1].Value.(*DMemOperand).Addr))
         }
       case IMem:
+        cpu.LastAccessedAddress = operands[1].Value.(*IMemOperand).Addr
         if r.Size == 0x0 {
           cpu.Registers[r.RegNum] <<= cpu.Memory.ReadDWord(operands[1].Value.(*IMemOperand).Addr)
         } else if r.Size == 0x1 {
@@ -590,6 +612,7 @@ var instructionSet = map[uint8]*Instruction{
           cpu.Registers[r.RegNum] >>= uint32(uint8(cpu.Registers[operands[1].Value.(*RegOperand).RegNum]))
         }
       case DMem:
+        cpu.LastAccessedAddress = operands[1].Value.(*DMemOperand).Addr
         if r.Size == 0x0 {
           cpu.Registers[r.RegNum] >>= cpu.Memory.ReadDWord(operands[1].Value.(*DMemOperand).Addr)
         } else if r.Size == 0x1 {
@@ -598,6 +621,7 @@ var instructionSet = map[uint8]*Instruction{
           cpu.Registers[r.RegNum] >>= uint32(cpu.Memory.Read(operands[1].Value.(*DMemOperand).Addr))
         }
       case IMem:
+        cpu.LastAccessedAddress = operands[1].Value.(*IMemOperand).Addr
         if r.Size == 0x0 {
           cpu.Registers[r.RegNum] >>= cpu.Memory.ReadDWord(operands[1].Value.(*IMemOperand).Addr)
         } else if r.Size == 0x1 {
@@ -653,6 +677,7 @@ var instructionSet = map[uint8]*Instruction{
           }
         }
       case DMem:
+        cpu.LastAccessedAddress = operands[1].Value.(*DMemOperand).Addr
         if r.Size == 0x0 {
           if cpu.Registers[r.RegNum] == cpu.Memory.ReadDWord(operands[1].Value.(*DMemOperand).Addr) {
             cpu.Registers[0xF] = 0x0
@@ -679,6 +704,7 @@ var instructionSet = map[uint8]*Instruction{
           }
         }
       case IMem:
+        cpu.LastAccessedAddress = operands[1].Value.(*IMemOperand).Addr
         if r.Size == 0x0 {
           if cpu.Registers[r.RegNum] == cpu.Memory.ReadDWord(operands[1].Value.(*IMemOperand).Addr) {
             cpu.Registers[0xF] = 0x0
@@ -930,8 +956,10 @@ var instructionSet = map[uint8]*Instruction{
       case Reg:
         cpu.Stack.Push(cpu.Registers[operands[0].Value.(*RegOperand).RegNum])
       case DMem:
+        cpu.LastAccessedAddress = operands[0].Value.(*DMemOperand).Addr
         cpu.Stack.Push(cpu.Memory.ReadDWord(operands[0].Value.(*DMemOperand).Addr))
       case IMem:
+        cpu.LastAccessedAddress = operands[0].Value.(*IMemOperand).Addr
         cpu.Stack.Push(uint32(cpu.Memory.ReadWord(operands[0].Value.(*IMemOperand).Addr)))
       case Imm:
         cpu.Stack.Push(operands[0].Value.(*ImmOperand).Value)
@@ -949,8 +977,10 @@ var instructionSet = map[uint8]*Instruction{
       case Reg:
         cpu.Registers[operands[0].Value.(*RegOperand).RegNum] = cpu.Stack.Pop()
       case DMem:
+        cpu.LastAccessedAddress = operands[0].Value.(*DMemOperand).Addr
         cpu.Memory.WriteDWord(operands[0].Value.(*DMemOperand).Addr, cpu.Stack.Pop())
       case IMem:
+        cpu.LastAccessedAddress = operands[0].Value.(*IMemOperand).Addr
         cpu.Memory.WriteWord(operands[0].Value.(*IMemOperand).Addr, uint16(cpu.Stack.Pop()))
       }
     },

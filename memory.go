@@ -20,10 +20,11 @@ func NewMemory() *Memory {
   }
 }
 
-func (m *Memory) LoadProgram(program []byte) {
+func (m *Memory) LoadProgram(program []byte) uint32 {
   for i, b := range program {
     m.ROM.mem[i] = b
   }
+  return 0x80000000
 }
 
 func (m *Memory) Read(addr uint32) uint8 {

@@ -6,6 +6,7 @@ type CPU struct {
   PC uint32
   Stack *Stack
   Halted bool
+  LastAccessedAddress uint32
 }
 
 type Stack struct {
@@ -39,6 +40,13 @@ func NewCPU() *CPU {
   }
 }
 
+func (c *CPU) Reset() {
+  c.Memory.Clear()
+  c.Registers = [16]uint32{}
+  c.PC = 0
+  c.Stack = NewStack()
+}
+
 func (c *CPU) Step() {
   if c.Halted {
     return
@@ -48,6 +56,6 @@ func (c *CPU) Step() {
 }
 
 func (c *CPU) LoadProgram(program []byte) {
-  c.Memory.LoadProgram(program)
+  c.PC = c.Memory.LoadProgram(program)
 }
   
