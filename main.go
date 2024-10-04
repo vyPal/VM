@@ -9,6 +9,7 @@ func main() {
   c := NewCPU()
   fmt.Println("Parsing file", os.Args[1])
   p := &Parser{Filename: os.Args[1]}
+  p.BaseAddress = 0x80000000
   p.Parse()
   c.LoadProgram(p.Program)
   c.PC = 0x80000000

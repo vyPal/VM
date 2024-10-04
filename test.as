@@ -1,4 +1,10 @@
 .TEXT
-  LD R0 1
-  ST [0x00000000] R0
+  LD R0 10
+  LD R1 0
+LOOP:
+  SUB R0 1
+  ADD R1 1
+  CMP R0 0
+  JNE [LOOP]
+  ST [0x00000000] R1
   HLT

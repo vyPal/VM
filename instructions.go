@@ -49,18 +49,28 @@ type Operand struct {
 func GetInstruction(inst string) *Instruction {
   for _, i := range instructionSet {
     if i.Name == inst {
-      return &Instruction{
-        Opcode: i.Opcode,
-        Name: i.Name,
-        Operands: i.Operands,
-        Execute: i.Execute,
-      }
+      c := *i
+      c.Operands = make([]Operand, len(i.Operands))
+      copy(c.Operands, i.Operands)
+      return &c
     }
   }
   return nil
 }
 
-var instructionSet = map[uint8]Instruction{
+func GetInstructionByOpcode(opcode byte) *Instruction {
+  for _, i := range instructionSet {
+    if i.Opcode == opcode {
+      c := *i
+      c.Operands = make([]Operand, len(i.Operands))
+      copy(c.Operands, i.Operands)
+      return &c
+    }
+  }
+  return nil
+}
+
+var instructionSet = map[uint8]*Instruction{
   0x00: {
     Opcode: 0x00,
     Name: "NOP",
@@ -994,7 +1004,7 @@ func EncodeInstruction(inst *Instruction) []byte {
 
 func DecodeInstruction(mem *Memory, pc *uint32) *Instruction {
   data := []byte{mem.Read(*pc)}
-  inst := instructionSet[data[0]]
+  inst := GetInstructionByOpcode(data[0])
   operands := make([]Operand, len(inst.Operands))
   offset := 1
   for i, operand := range inst.Operands {
@@ -1041,5 +1051,5 @@ func DecodeInstruction(mem *Memory, pc *uint32) *Instruction {
   }
   *pc += uint32(offset)
   inst.Operands = operands
-  return &inst
+  return inst
 }

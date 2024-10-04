@@ -10,6 +10,7 @@ import (
 type Parser struct {
   Filename string
   Contents string
+  BaseAddress uint32
   Labels map[string]uint32
   Data []*Data
   Instructions []*Instruction
@@ -49,8 +50,19 @@ func (p *Parser) Parse() {
   for _, line := range strings.Split(p.Contents, "\n") {
     p.ParseLine(line)
   }
+  for _, data := range p.Data {
+    data.Address = p.BaseAddress + uint32(len(p.Program))
+    p.Program = append(p.Program, EncodeData(data.Value, data.Size)...)
+  }
   for _, f := range p.PostParse {
     f()
+  }
+  p.Program = []byte{}
+  for _, instr := range p.Instructions {
+    p.Program = append(p.Program, EncodeInstruction(instr)...)
+  }
+  for _, data := range p.Data {
+    p.Program = append(p.Program, EncodeData(data.Value, data.Size)...)
   }
 }
 
@@ -79,15 +91,12 @@ func (p *Parser) ParseSection(line string) {
 
 func (p *Parser) ParseLabel(line string) {
   label := line[:len(line)-1]
-  p.Labels[label] = uint32(len(p.Program))
+  p.Labels[label] = p.BaseAddress + uint32(len(p.Program))
 }
 
 func (p *Parser) ParseData(line string) {
   parts := strings.Split(line, " ")
-  addr, err := strconv.ParseUint(parts[0], 0, 32)
-  if err != nil {
-    panic("Invalid address for data: " + parts[0])
-  }
+  name := parts[0]
   size, err := strconv.ParseUint(parts[1], 0, 32)
   if err != nil {
     panic("Invalid size for data: " + parts[1])
@@ -97,11 +106,10 @@ func (p *Parser) ParseData(line string) {
     panic("Invalid value for data: " + parts[2])
   }
   p.Data = append(p.Data, &Data{
-    Address: uint32(addr),
+    Name: name,
     Size: uint32(size),
     Value: uint32(value),
   })
-  p.Program = append(p.Program, EncodeData(uint32(value), uint32(size))...)
 }
 
 func EncodeData(value, size uint32) []byte {
@@ -123,11 +131,14 @@ func (p *Parser) ParseInstruction(line string) {
   opcode := parts[0]
   args := parts[1:]
   instruction := GetInstruction(opcode)
-  for i, arg := range args {
-    p.ParseOperand(arg, &instruction.Operands[i], instruction.Name)
-  }
   if instruction == nil {
     panic("Unknown instruction: " + opcode)
+  }
+  if len(args) != len(instruction.Operands) {
+    panic("Invalid number of arguments for " + opcode)
+  }
+  for i, arg := range args {
+    p.ParseOperand(arg, &instruction.Operands[i], instruction.Name)
   }
   p.Instructions = append(p.Instructions, instruction)
   p.Program = append(p.Program, EncodeInstruction(instruction)...)
@@ -165,6 +176,8 @@ func (p *Parser) ParseOperand(arg string, operand *Operand, opName string) {
           label := toParse
           if val, ok := p.Labels[toParse]; ok {
             operand.Value.(*DMemOperand).Addr = val
+          } else if val, ok := p.DataByName(toParse); ok {
+            operand.Value.(*DMemOperand).Addr = val.Value
           } else {
             panic("Unknown label: " + label)
           }
