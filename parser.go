@@ -101,23 +101,45 @@ func (p *Parser) ParseData(line string) {
   if err != nil {
     panic("Invalid size for data: " + parts[1])
   }
-  value, err := strconv.ParseUint(parts[2], 0, 32)
-  if err != nil {
-    panic("Invalid value for data: " + parts[2])
+
+  if strings.HasPrefix(parts[2], "{") && strings.HasSuffix(parts[len(parts)-1], "}") {
+    values := strings.Trim(parts[2], "{}")
+    valueParts := strings.Split(values, ",")
+    var valueArray []uint32
+    for _, v := range valueParts {
+      value, err := strconv.ParseUint(strings.TrimSpace(v), 0, 32)
+      if err != nil {
+        panic("Invalid value in array: " + v)
+      }
+      valueArray = append(valueArray, uint32(value))
+    }
+
+    for _, v := range valueArray {
+      p.Data = append(p.Data, &Data{
+        Name:  name,
+        Size:  uint32(size),
+        Value: v,
+      })
+    }
+   } else {
+    value, err := strconv.ParseUint(parts[2], 0, 32)
+    if err != nil {
+      panic("Invalid value for data: " + parts[2])
+    }
+    p.Data = append(p.Data, &Data{
+      Name:  name,
+      Size:  uint32(size),
+      Value: uint32(value),
+    })
   }
-  p.Data = append(p.Data, &Data{
-    Name: name,
-    Size: uint32(size),
-    Value: uint32(value),
-  })
 }
 
 func EncodeData(value, size uint32) []byte {
-  data := make([]byte, size)
-  for i := uint32(0); i < size; i++ {
-    data[i] = byte(value >> (i * 8))
-  }
-  return data
+    data := make([]byte, size)
+    for i := uint32(0); i < size; i++ {
+        data[i] = byte(value >> (i * 8))
+    }
+    return data
 }
 
 func (p *Parser) ParseInstruction(line string) {
