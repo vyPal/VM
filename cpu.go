@@ -45,6 +45,7 @@ func (c *CPU) Reset() {
   c.Registers = [16]uint32{}
   c.PC = 0
   c.Stack = NewStack()
+  c.Halted = false
 }
 
 func (c *CPU) Step() {

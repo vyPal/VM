@@ -13,12 +13,11 @@ import (
 
 func main() {
   c := NewCPU()
-  fmt.Println("Parsing file", os.Args[1])
   p := &Parser{Filename: os.Args[1]}
   p.BaseAddress = 0x80000000
   p.Parse()
   c.LoadProgram(p.Program)
-  
+
   simulationDelay := 100 // ms per instruction
 
   if err := ui.Init(); err != nil {
@@ -84,7 +83,10 @@ func main() {
 			if run {
 				c.Step()
 			}
-			video.Text = string(c.Memory.VRAM.mem[:])
+			video.Text = ""
+			for i := 0; i < 37*27; i++ {
+				video.Text += fmt.Sprintf("%c", c.Memory.Read(0xFFFFF000+uint32(i)))
+			}
 
 			regDump.Text = ""
 			for i, v := range c.Registers {

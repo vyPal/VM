@@ -34,7 +34,7 @@ func (m *Memory) Read(addr uint32) uint8 {
   case addr < 0x88000000:
     return m.ROM.Read(addr - 0x80000000)
   case addr >= 0xFFFFF000:
-    return m.RAM.Read(addr - 0xFFFFF000)
+    return m.VRAM.Read(addr - 0xFFFFF000)
   default:
     panic("Addressing unuseable memory")
   }
@@ -81,7 +81,7 @@ func (m *Memory) Write(addr uint32, data uint8) {
   case addr < 0x88000000:
     panic("ROM Write")
   case addr >= 0xFFFFF000:
-    m.RAM.Write(addr - 0xFFFFF000, data)
+    m.VRAM.Write(addr - 0xFFFFF000, data)
   default:
     panic("Addressing unuseable memory")
   }
