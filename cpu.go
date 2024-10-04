@@ -46,4 +46,8 @@ func (c *CPU) Step() {
   instr := DecodeInstruction(c.Memory, &c.PC)
   instr.Execute(c, instr.Operands)
 }
+
+func (c *CPU) LoadProgram(program []byte) {
+  c.Memory.LoadProgram(program)
+}
   

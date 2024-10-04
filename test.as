@@ -1,0 +1,4 @@
+.TEXT
+  LD R0 1
+  ST [0x00000000] R0
+  HLT

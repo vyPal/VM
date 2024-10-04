@@ -20,14 +20,20 @@ func NewMemory() *Memory {
   }
 }
 
+func (m *Memory) LoadProgram(program []byte) {
+  for i, b := range program {
+    m.ROM.mem[i] = b
+  }
+}
+
 func (m *Memory) Read(addr uint32) uint8 {
   switch {
   case addr < 0x80000000:
     return m.RAM.Read(addr)
   case addr < 0x88000000:
-    return m.ROM.Read(addr)
+    return m.ROM.Read(addr - 0x80000000)
   case addr >= 0xFFFFF000:
-    return m.RAM.Read(addr)
+    return m.RAM.Read(addr - 0xFFFFF000)
   default:
     panic("Addressing unuseable memory")
   }
@@ -38,7 +44,7 @@ func (m *Memory) ReadWord(addr uint32) uint16 {
   case addr < 0x80000000:
     return m.RAM.ReadWord(addr)
   case addr < 0x88000000:
-    return m.ROM.ReadWord(addr)
+    return m.ROM.ReadWord(addr - 0x80000000)
   case addr >= 0xFFFFF000:
     panic("VRAM ReadWord")
   default:
@@ -51,7 +57,7 @@ func (m *Memory) ReadDWord(addr uint32) uint32 {
   case addr < 0x80000000:
     return m.RAM.ReadDWord(addr)
   case addr < 0x88000000:
-    return m.ROM.ReadDWord(addr)
+    return m.ROM.ReadDWord(addr - 0x80000000)
   case addr >= 0xFFFFF000:
     panic("VRAM ReadDWord")
   default:
@@ -74,7 +80,7 @@ func (m *Memory) Write(addr uint32, data uint8) {
   case addr < 0x88000000:
     panic("ROM Write")
   case addr >= 0xFFFFF000:
-    m.RAM.Write(addr, data)
+    m.RAM.Write(addr - 0xFFFFF000, data)
   default:
     panic("Addressing unuseable memory")
   }
