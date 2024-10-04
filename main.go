@@ -12,21 +12,21 @@ import (
 )
 
 func main() {
-  c := NewCPU()
-  p := &Parser{Filename: os.Args[1]}
-  p.BaseAddress = 0x80000000
-  p.Parse()
-  c.LoadProgram(p.Program)
+	c := NewCPU()
+	p := &Parser{Filename: os.Args[1]}
+	p.BaseAddress = 0x80000000
+	p.Parse()
+	c.LoadProgram(p.Program)
 
-  simulationDelay := 100 // ms per instruction
+	simulationDelay := 100 // ms per instruction
 
-  if err := ui.Init(); err != nil {
+	if err := ui.Init(); err != nil {
 		log.Fatalf("failed to initialize termui: %v", err)
 	}
 	defer ui.Close()
 
 	video := widgets.NewParagraph()
-  video.Title = "Text-mode video buffer"
+	video.Title = "Text-mode video buffer"
 	video.SetRect(0, 0, 42, 27)
 
 	regDump := widgets.NewParagraph()
@@ -54,7 +54,7 @@ func main() {
 
 	run := false
 
-  uiEvents := ui.PollEvents()
+	uiEvents := ui.PollEvents()
 	ticker := time.NewTicker(time.Millisecond * time.Duration(simulationDelay))
 	for {
 		select {
@@ -78,7 +78,7 @@ func main() {
 				run = false
 				c.Reset()
 				c.LoadProgram(p.Program)
-			}	
+			}
 		case <-ticker.C:
 			if run {
 				c.Step()
@@ -114,13 +114,13 @@ func drawMemoryWindow(mem *Memory, programCounter uint32) string {
 		linesBefore = int(programCounter)
 		linesAfter = 15 - linesBefore
 	}
-	if programCounter > 0x88000000 - 8 {
+	if programCounter > 0x88000000-8 {
 		linesAfter = 0x88000000 - int(programCounter)
 		linesBefore = 15 - linesAfter
 	}
 
 	var memoryWindow string
-	for i := programCounter - uint32(linesBefore); i < programCounter + uint32(linesAfter); i++ {
+	for i := programCounter - uint32(linesBefore); i < programCounter+uint32(linesAfter); i++ {
 		if i == programCounter {
 			memoryWindow += fmt.Sprintf(">%08x: %02x %s\n", i, mem.Read(i), instructionSet[mem.Read(i)].Name)
 		} else {
@@ -139,13 +139,13 @@ func drawAccessWindow(mem *Memory, lastAccess uint32) string {
 		linesBefore = int(lastAccess)
 		linesAfter = 15 - linesBefore
 	}
-	if lastAccess > 0x88000000 - 8 {
+	if lastAccess > 0x88000000-8 {
 		linesAfter = 0x88000000 - int(lastAccess)
 		linesBefore = 15 - linesAfter
 	}
 
 	var memoryWindow string
-	for i := lastAccess - uint32(linesBefore); i < lastAccess + uint32(linesAfter); i++ {
+	for i := lastAccess - uint32(linesBefore); i < lastAccess+uint32(linesAfter); i++ {
 		if i == lastAccess {
 			memoryWindow += fmt.Sprintf(">%08x: %02x\n", i, mem.Read(i))
 		} else {
