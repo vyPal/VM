@@ -163,7 +163,7 @@ func (p *Parser) ParseOperand(arg string, operand *Operand, opName string) {
           if val, ok := p.Labels[toParse]; ok {
             operand.Value.(*IMemOperand).Addr = val
           } else if val, ok := p.DataByName(toParse); ok {
-            operand.Value.(*IMemOperand).Addr = val.Value
+            operand.Value.(*IMemOperand).Addr = val.Address
           } else {
             panic("Unknown label: " + label)
           }
@@ -182,7 +182,7 @@ func (p *Parser) ParseOperand(arg string, operand *Operand, opName string) {
           if val, ok := p.Labels[toParse]; ok {
             operand.Value.(*DMemOperand).Addr = val
           } else if val, ok := p.DataByName(toParse); ok {
-            operand.Value.(*DMemOperand).Addr = val.Value
+            operand.Value.(*DMemOperand).Addr = val.Address
           } else {
             panic("Unknown label: " + label)
           }
