@@ -134,6 +134,11 @@ func (p *Parser) ParseInstruction(line string) {
   if instruction == nil {
     panic("Unknown instruction: " + opcode)
   }
+  for i, arg := range args {
+    if arg[0] == ';' {
+      args = args[:i]
+    }
+  }
   if len(args) != len(instruction.Operands) {
     panic("Invalid number of arguments for " + opcode)
   }
