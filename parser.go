@@ -102,8 +102,10 @@ func (p *Parser) ParseData(line string) {
 		panic("Invalid size for data: " + parts[1])
 	}
 
-	if strings.HasPrefix(parts[2], "{") && strings.HasSuffix(parts[len(parts)-1], "}") {
-		values := strings.Trim(parts[2], "{}")
+	rest := strings.Join(parts[2:], " ")
+
+	if strings.HasPrefix(rest, "{") && strings.HasSuffix(rest, "}") {
+		values := strings.Trim(rest, "{}")
 		valueParts := strings.Split(values, ",")
 		var valueArray []uint32
 		for _, v := range valueParts {
@@ -125,9 +127,9 @@ func (p *Parser) ParseData(line string) {
 			})
 		}
 	} else {
-		value, err := strconv.ParseUint(parts[2], 0, 32)
+		value, err := strconv.ParseUint(rest, 0, 32)
 		if err != nil {
-			panic("Invalid value for data: " + parts[2])
+			panic("Invalid value for data: " + rest)
 		}
 		p.Data = append(p.Data, &Data{
 			Name:  name,
@@ -197,7 +199,16 @@ func (p *Parser) ParseOperand(arg string, operand *Operand, opName string) {
 				offsetStr := strings.TrimSpace(parts[1])
 				offset, err := strconv.ParseUint(offsetStr, 0, 32)
 				if err != nil {
-					panic("Invalid offset for IMem: " + offsetStr)
+					p.PostParse = append(p.PostParse, func() {
+							label := toParse
+							if val, ok := p.Labels[offsetStr]; ok {
+								operand.Value.(*IMemOperand).Addr = val
+							} else if val, ok := p.DataByName(offsetStr); ok {
+								operand.Value.(*IMemOperand).Addr = val.Address
+							} else {
+								panic("Unknown label: " + label)
+							}
+						})
 				}
 
 				operand.Value = &IMemOperand{
@@ -238,7 +249,16 @@ func (p *Parser) ParseOperand(arg string, operand *Operand, opName string) {
 				offsetStr := strings.TrimSpace(parts[1])
 				offset, err := strconv.ParseUint(offsetStr, 0, 32)
 				if err != nil {
-					panic("Invalid offset for DMem: " + offsetStr)
+					p.PostParse = append(p.PostParse, func() {
+							label := toParse
+							if val, ok := p.Labels[offsetStr]; ok {
+								operand.Value.(*DMemOperand).Addr = val
+							} else if val, ok := p.DataByName(offsetStr); ok {
+								operand.Value.(*DMemOperand).Addr = val.Address
+							} else {
+								panic("Unknown label: " + label)
+							}
+						})
 				}
 
 				operand.Value = &DMemOperand{
