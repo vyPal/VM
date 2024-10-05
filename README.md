@@ -22,7 +22,7 @@ To assemble a file and save the bytecode to a file, use the `-bytecode` flag. If
 
 ## Assembly
 The VM uses a custom assembly language. The following instructions are supported:
-<detailes>
+<details>
 <summary> List of instructions </summary>
 - `NOP` - No operation
 - `LD <r> <r/im/dm/i>` - Load a value into a register
