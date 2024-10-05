@@ -8,16 +8,22 @@ import (
 )
 
 type Parser struct {
-	Filename     string
-	Contents     string
-	BaseAddress  uint32
-	Labels       map[string]uint32
-	Data         []*Data
-	Instructions []*Instruction
-	Program      []byte
-	PostParse    []func()
+	Filename           string
+	Contents           string
+	DefaultBaseAddress uint32
+	Labels             map[string]uint32
+	Sectors            []*Sector
 
 	CurrentSection string
+	CurrentSector  *Sector
+}
+
+type Sector struct {
+	BaseAddress  uint32
+	Instructions []*Instruction
+	Data         []*Data
+	Program      []byte
+	PostParse    []func()
 }
 
 type Data struct {
@@ -28,9 +34,11 @@ type Data struct {
 }
 
 func (p *Parser) DataByName(name string) (*Data, bool) {
-	for _, data := range p.Data {
-		if name == data.Name {
-			return data, true
+	for _, sector := range p.Sectors {
+		for _, data := range sector.Data {
+			if name == data.Name {
+				return data, true
+			}
 		}
 	}
 	return nil, false
@@ -43,26 +51,39 @@ func (p *Parser) Parse() {
 	}
 	p.Contents = string(contents)
 	p.Labels = make(map[string]uint32)
-	p.Data = []*Data{}
-	p.Instructions = []*Instruction{}
-	p.Program = []byte{}
-	p.PostParse = []func(){}
+	p.Sectors = []*Sector{}
+	p.CurrentSector = &Sector{BaseAddress: p.DefaultBaseAddress}
+	p.Sectors = append(p.Sectors, p.CurrentSector)
 	for _, line := range strings.Split(p.Contents, "\n") {
 		p.ParseLine(line)
 	}
-	for _, data := range p.Data {
-		data.Address = p.BaseAddress + uint32(len(p.Program))
-		p.Program = append(p.Program, EncodeData(data.Value, data.Size)...)
+
+	for i := 0; i < len(p.Sectors); i++ {
+		if len(p.Sectors[i].Instructions) == 0 && len(p.Sectors[i].Data) == 0 {
+			p.Sectors = append(p.Sectors[:i], p.Sectors[i+1:]...)
+			i--
+		}
 	}
-	for _, f := range p.PostParse {
-		f()
+
+	for _, sector := range p.Sectors {
+		for _, data := range sector.Data {
+			data.Address = sector.BaseAddress + uint32(len(sector.Program))
+			sector.Program = append(sector.Program, EncodeData(data.Value, data.Size)...)
+		}
 	}
-	p.Program = []byte{}
-	for _, instr := range p.Instructions {
-		p.Program = append(p.Program, EncodeInstruction(instr)...)
+	for _, sector := range p.Sectors {
+		for _, postParse := range sector.PostParse {
+			postParse()
+		}
 	}
-	for _, data := range p.Data {
-		p.Program = append(p.Program, EncodeData(data.Value, data.Size)...)
+	for _, sector := range p.Sectors {
+		sector.Program = []byte{}
+		for _, instruction := range sector.Instructions {
+			sector.Program = append(sector.Program, EncodeInstruction(instruction)...)
+		}
+		for _, data := range sector.Data {
+			sector.Program = append(sector.Program, EncodeData(data.Value, data.Size)...)
+		}
 	}
 }
 
@@ -91,7 +112,7 @@ func (p *Parser) ParseSection(line string) {
 
 func (p *Parser) ParseLabel(line string) {
 	label := line[:len(line)-1]
-	p.Labels[label] = p.BaseAddress + uint32(len(p.Program))
+	p.Labels[label] = p.CurrentSector.BaseAddress + uint32(len(p.CurrentSector.Program))
 }
 
 func (p *Parser) ParseData(line string) {
@@ -120,7 +141,7 @@ func (p *Parser) ParseData(line string) {
 		}
 
 		for _, v := range valueArray {
-			p.Data = append(p.Data, &Data{
+			p.CurrentSector.Data = append(p.CurrentSector.Data, &Data{
 				Name:  name,
 				Size:  uint32(size),
 				Value: v,
@@ -131,7 +152,7 @@ func (p *Parser) ParseData(line string) {
 		if err != nil {
 			panic("Invalid value for data: " + rest)
 		}
-		p.Data = append(p.Data, &Data{
+		p.CurrentSector.Data = append(p.CurrentSector.Data, &Data{
 			Name:  name,
 			Size:  uint32(size),
 			Value: uint32(value),
@@ -157,6 +178,15 @@ func (p *Parser) ParseInstruction(line string) {
 	parts := strings.Split(line, " ")
 	opcode := parts[0]
 	args := parts[1:]
+	if opcode == "ORG" {
+		value, err := strconv.ParseUint(args[0], 0, 32)
+		if err != nil {
+			panic("Invalid value for ORG: " + args[0])
+		}
+		p.CurrentSector = &Sector{BaseAddress: uint32(value)}
+		p.Sectors = append(p.Sectors, p.CurrentSector)
+		return
+	}
 	instruction := GetInstruction(opcode)
 	if instruction == nil {
 		panic("Unknown instruction: " + opcode)
@@ -172,17 +202,17 @@ func (p *Parser) ParseInstruction(line string) {
 	for i, arg := range args {
 		p.ParseOperand(arg, &instruction.Operands[i], instruction.Name)
 	}
-	p.Instructions = append(p.Instructions, instruction)
-	p.Program = append(p.Program, EncodeInstruction(instruction)...)
+	p.CurrentSector.Instructions = append(p.CurrentSector.Instructions, instruction)
+	p.CurrentSector.Program = append(p.CurrentSector.Program, EncodeInstruction(instruction)...)
 }
 
-func getRegisterID(name string) byte {
+func getRegisterID(name string) (byte, error) {
 	id := strings.TrimSuffix(strings.TrimSuffix(name[1:], "B"), "L")
 	parsedValue, err := strconv.ParseUint(id, 10, 32)
 	if err != nil {
-		panic(name + " is not a valid register: " + err.Error())
+		return 0, err
 	}
-	return byte(parsedValue)
+	return byte(parsedValue), nil
 }
 
 func (p *Parser) ParseOperand(arg string, operand *Operand, opName string) {
@@ -199,31 +229,50 @@ func (p *Parser) ParseOperand(arg string, operand *Operand, opName string) {
 				offsetStr := strings.TrimSpace(parts[1])
 				offset, err := strconv.ParseUint(offsetStr, 0, 32)
 				if err != nil {
-					p.PostParse = append(p.PostParse, func() {
-							label := toParse
-							if val, ok := p.Labels[offsetStr]; ok {
-								operand.Value.(*IMemOperand).Addr = val
-							} else if val, ok := p.DataByName(offsetStr); ok {
-								operand.Value.(*IMemOperand).Addr = val.Address
-							} else {
-								panic("Unknown label: " + label)
-							}
-						})
+					p.CurrentSector.PostParse = append(p.CurrentSector.PostParse, func() {
+						label := toParse
+						if val, ok := p.Labels[offsetStr]; ok {
+							operand.Value.(*IMemOperand).Addr = val
+						} else if val, ok := p.DataByName(offsetStr); ok {
+							operand.Value.(*IMemOperand).Addr = val.Address
+						} else {
+							panic("Unknown label: " + label)
+						}
+					})
 				}
 
+				rid, err := getRegisterID(registerName)
+				if err != nil {
+					panic("Invalid register for " + opName + ": " + registerName)
+				}
 				operand.Value = &IMemOperand{
 					Type:     Offset,
 					Addr:     uint32(offset),
-					Register: getRegisterID(registerName), // Implement this function to map register names to IDs
+					Register: rid, // Implement this function to map register names to IDs
 				}
 			} else {
 				parsedValue, err := strconv.ParseUint(toParse, 0, 32)
 				if err != nil {
 					if toParse[0] == 'r' || toParse[0] == 'R' {
-						operand.Value = &IMemOperand{Type: Register, Register: getRegisterID(toParse)}
+						rid, err := getRegisterID(toParse)
+						if err != nil {
+							operand.Value = &IMemOperand{Type: Address}
+							p.CurrentSector.PostParse = append(p.CurrentSector.PostParse, func() {
+								label := toParse
+								if val, ok := p.Labels[toParse]; ok {
+									operand.Value.(*IMemOperand).Addr = val
+								} else if val, ok := p.DataByName(toParse); ok {
+									operand.Value.(*IMemOperand).Addr = val.Address
+								} else {
+									panic("Unknown label: " + label)
+								}
+							})
+						} else {
+							operand.Value = &IMemOperand{Type: Register, Register: rid}
+						}
 					} else {
 						operand.Value = &IMemOperand{Type: Address}
-						p.PostParse = append(p.PostParse, func() {
+						p.CurrentSector.PostParse = append(p.CurrentSector.PostParse, func() {
 							label := toParse
 							if val, ok := p.Labels[toParse]; ok {
 								operand.Value.(*IMemOperand).Addr = val
@@ -249,31 +298,50 @@ func (p *Parser) ParseOperand(arg string, operand *Operand, opName string) {
 				offsetStr := strings.TrimSpace(parts[1])
 				offset, err := strconv.ParseUint(offsetStr, 0, 32)
 				if err != nil {
-					p.PostParse = append(p.PostParse, func() {
-							label := toParse
-							if val, ok := p.Labels[offsetStr]; ok {
-								operand.Value.(*DMemOperand).Addr = val
-							} else if val, ok := p.DataByName(offsetStr); ok {
-								operand.Value.(*DMemOperand).Addr = val.Address
-							} else {
-								panic("Unknown label: " + label)
-							}
-						})
+					p.CurrentSector.PostParse = append(p.CurrentSector.PostParse, func() {
+						label := toParse
+						if val, ok := p.Labels[offsetStr]; ok {
+							operand.Value.(*DMemOperand).Addr = val
+						} else if val, ok := p.DataByName(offsetStr); ok {
+							operand.Value.(*DMemOperand).Addr = val.Address
+						} else {
+							panic("Unknown label: " + label)
+						}
+					})
 				}
 
+				rid, err := getRegisterID(registerName)
+				if err != nil {
+					panic("Invalid register for " + opName + ": " + registerName)
+				}
 				operand.Value = &DMemOperand{
 					Type:     Offset,
 					Addr:     uint32(offset),
-					Register: getRegisterID(registerName), // Implement this function to map register names to IDs
+					Register: rid, // Implement this function to map register names to IDs
 				}
 			} else {
 				parsedValue, err := strconv.ParseUint(toParse, 0, 32)
 				if err != nil {
 					if toParse[0] == 'r' || toParse[0] == 'R' {
-						operand.Value = &DMemOperand{Type: Register, Register: getRegisterID(toParse)}
+						rid, err := getRegisterID(toParse)
+						if err != nil {
+							operand.Value = &DMemOperand{Type: Address}
+							p.CurrentSector.PostParse = append(p.CurrentSector.PostParse, func() {
+								label := toParse
+								if val, ok := p.Labels[toParse]; ok {
+									operand.Value.(*DMemOperand).Addr = val
+								} else if val, ok := p.DataByName(toParse); ok {
+									operand.Value.(*DMemOperand).Addr = val.Address
+								} else {
+									panic("Unknown label: " + label)
+								}
+							})
+						} else {
+							operand.Value = &DMemOperand{Type: Register, Register: rid}
+						}
 					} else {
 						operand.Value = &DMemOperand{Type: Address}
-						p.PostParse = append(p.PostParse, func() {
+						p.CurrentSector.PostParse = append(p.CurrentSector.PostParse, func() {
 							label := toParse
 							if val, ok := p.Labels[toParse]; ok {
 								operand.Value.(*DMemOperand).Addr = val

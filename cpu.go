@@ -56,6 +56,18 @@ func (c *CPU) Step() {
 	instr.Execute(c, instr.Operands)
 }
 
-func (c *CPU) LoadProgram(program []byte) {
-	c.PC = c.Memory.LoadProgram(program)
+func (c *CPU) LoadProgram(program *Parser) {
+	fisrtSectorWithInstructions := -1
+	for sid, sector := range program.Sectors {
+		if sector.Instructions != nil && fisrtSectorWithInstructions == -1 {
+			fisrtSectorWithInstructions = sid
+		}
+		if sector.Program != nil {
+			c.Memory.LoadProgram(sector.BaseAddress, sector.Program)
+		}
+	}
+	if fisrtSectorWithInstructions == -1 {
+		return
+	}
+	c.PC = program.Sectors[fisrtSectorWithInstructions].BaseAddress
 }

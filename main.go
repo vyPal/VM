@@ -14,9 +14,9 @@ import (
 func main() {
 	c := NewCPU()
 	p := &Parser{Filename: os.Args[1]}
-	p.BaseAddress = 0x80000000
+	p.DefaultBaseAddress = 0x80000000
 	p.Parse()
-	c.LoadProgram(p.Program)
+	c.LoadProgram(p)
 
 	simulationDelay := 100 // ms per instruction
 
@@ -77,7 +77,7 @@ func main() {
 			case "c":
 				run = false
 				c.Reset()
-				c.LoadProgram(p.Program)
+				c.LoadProgram(p)
 			}
 		case <-ticker.C:
 			if run {
@@ -114,14 +114,18 @@ func drawMemoryWindow(mem *Memory, programCounter uint32) string {
 		linesBefore = int(programCounter)
 		linesAfter = 15 - linesBefore
 	}
-	if programCounter > 0x88000000-8 {
-		linesAfter = 0x88000000 - int(programCounter)
+	if programCounter > 0xFFFFFFFF-8 {
+		linesAfter = 0xFFFFFFFF - int(programCounter)
 		linesBefore = 15 - linesAfter
 	}
 
 	var memoryWindow string
 	for i := programCounter - uint32(linesBefore); i < programCounter+uint32(linesAfter); i++ {
-		if i == programCounter {
+		if !mem.CanRead(i) {
+			memoryWindow += fmt.Sprintf(" %08x: ??\n", i)
+			continue
+		}
+		if i == programCounter && instructionSet[mem.Read(i)] != nil {
 			memoryWindow += fmt.Sprintf(">%08x: %02x %s\n", i, mem.Read(i), instructionSet[mem.Read(i)].Name)
 		} else {
 			memoryWindow += fmt.Sprintf(" %08x: %02x\n", i, mem.Read(i))
@@ -139,13 +143,17 @@ func drawAccessWindow(mem *Memory, lastAccess uint32) string {
 		linesBefore = int(lastAccess)
 		linesAfter = 15 - linesBefore
 	}
-	if lastAccess > 0x88000000-8 {
-		linesAfter = 0x88000000 - int(lastAccess)
+	if lastAccess > 0xFFFFFFFF-8 {
+		linesAfter = 0xFFFFFFFF - int(lastAccess)
 		linesBefore = 15 - linesAfter
 	}
 
 	var memoryWindow string
 	for i := lastAccess - uint32(linesBefore); i < lastAccess+uint32(linesAfter); i++ {
+		if !mem.CanRead(i) {
+			memoryWindow += fmt.Sprintf(" %08x: ??\n", i)
+			continue
+		}
 		if i == lastAccess {
 			memoryWindow += fmt.Sprintf(">%08x: %02x\n", i, mem.Read(i))
 		} else {

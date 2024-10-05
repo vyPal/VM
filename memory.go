@@ -20,11 +20,36 @@ func NewMemory() *Memory {
 	}
 }
 
-func (m *Memory) LoadProgram(program []byte) uint32 {
-	for i, b := range program {
-		m.ROM.mem[i] = b
+func (m *Memory) LoadProgram(startAddr uint32, program []byte) {
+	switch {
+	case startAddr < 0x80000000:
+		for i, v := range program {
+			m.RAM.Write(startAddr+uint32(i), v)
+		}
+	case startAddr < 0x88000000:
+		for i, v := range program {
+			m.ROM.Write(startAddr-0x80000000+uint32(i), v)
+		}
+	case startAddr >= 0xFFFFF000:
+		for i, v := range program {
+			m.VRAM.Write(startAddr-0xFFFFF000+uint32(i), v)
+		}
+	default:
+		panic("Addressing unuseable memory")
 	}
-	return 0x80000000
+}
+
+func (m *Memory) CanRead(addr uint32) bool {
+	switch {
+	case addr < 0x80000000:
+		return true
+	case addr < 0x88000000:
+		return true
+	case addr >= 0xFFFFF000:
+		return true
+	default:
+		return false
+	}
 }
 
 func (m *Memory) Read(addr uint32) uint8 {
@@ -178,7 +203,7 @@ func (r *ROM) ReadDWord(addr uint32) uint32 {
 }
 
 func (r *ROM) Write(addr uint32, data uint8) {
-	panic("ROM Write")
+	r.mem[addr] = data
 }
 
 func (r *ROM) Clear() {
