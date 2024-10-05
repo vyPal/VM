@@ -70,20 +70,62 @@ The VM supports up to 4GB of total memory. The memory is split into 3 sections:
 
 The rest of the memory is currently unused and reserved for future use.
 
+### Operands
+Operands can be registers, immediate values, direct memory addresses, or indirect memory addresses.
+
+#### Registers
+Registers can be accessed as 8, 16, or 32 bits.
+```asm
+R0 ; 32-bit register
+R0B ; 8-bit register
+R0W ; 16-bit register
+```
+#### Immediate Values
+Immediate values are constants that are directly encoded into the instruction.
+```asm
+0x1234 ; 32-bit immediate value
+0x12 ; 8-bit immediate value
+```
+
+#### Direct Memory Addresses
+Direct memory addresses are used to access memory directly.
+```asm
+[0x12345678] ; Use immediate value as memory address
+[R0] ; Read from memory address stored in register
+[R0+0x10] ; Read from memory address stored in register + immediate value (offset)
+```
+
+#### Indirect Memory Addresses
+Indirect memory addresses are used to access memory indirectly.
+```asm
+[[0x12345678]] ; Read from memory address that is stored at the immediate value
+[[R0]] ; Read from memory address that is stored at the memory address stored in register
+[[R0+0x10]] ; Read from memory address that is stored at the memory address stored in register + immediate value (offset)
+```
+
+### Labels
+Labels can be defined in the `.TEXT` section to make the code more readable. Labels can be used as jump targets or as addresses for memory operations.
+
+Label addresses are calculated at assembly time and are not stored in the bytecode.
+```asm
+.TEXT
+    <label>: ; Define a label
+```
+
 ### Stack
 The VM currently only has a fixed-size stack of 16384 values. The stack is used for function calls and temporary storage.
 
 ### Sections
 The assembly file supports 2 types of sections:
-- `DATA` - Data section for storing constants
-- `TEXT` - Text section for storing instructions
+- `.DATA` - Data section for storing constants
+- `.TEXT` - Text section for storing instructions
 
 These two sections can both be used multiple times in a single file.
 
 ### Defining Constants
 Constants can be defined in the `DATA` section. The syntax is as follows:
 ```asm
-DATA
+.DATA
     <name> <size> <value> ; Define a constant with a name, size (in bytes), and value
     <name> <size> {<value>, <value>, ...} ; Define an array of constants, the size should be the size of individual elements
 ```
