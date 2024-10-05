@@ -138,12 +138,11 @@ func (p *Parser) ParseData(line string) {
 }
 
 func (p *Parser) parseByteData(name, valueStr string) {
-	// Handle comma-separated values as an array of bytes, including string literals and numbers
 	values := parseMixedValues(valueStr)
 	for _, val := range values {
 		p.CurrentSector.Data = append(p.CurrentSector.Data, &Data{
 			Name:  name,
-			Size:  1,  // 1 byte per DB entry
+			Size:  1,
 			Value: uint32(val),
 		})
 	}
@@ -159,27 +158,21 @@ func parseMixedValues(valueStr string) []uint32 {
 		char := valueStr[i]
 
 		if escape {
-			// If we are escaping, append the escaped character and reset escape
 			currentBuffer.WriteByte(char)
 			escape = false
 		} else if char == '\\' {
-			// Handle escape sequences like \"
 			escape = true
 		} else if char == '"' && !escape {
-			// Toggle the inString flag when encountering a quote (if not escaped)
 			inString = !inString
 			currentBuffer.WriteByte(char)
 		} else if char == ',' && !inString {
-			// If we encounter a comma outside a string, process the current value
 			valueArray = append(valueArray, parseSingleValue(currentBuffer.String())...)
 			currentBuffer.Reset()
 		} else {
-			// Accumulate characters in the buffer
 			currentBuffer.WriteByte(char)
 		}
 	}
 
-	// Process the last value after the loop
 	if currentBuffer.Len() > 0 {
 		valueArray = append(valueArray, parseSingleValue(currentBuffer.String())...)
 	}
@@ -190,7 +183,6 @@ func parseMixedValues(valueStr string) []uint32 {
 func parseSingleValue(valueStr string) []uint32 {
 	valueStr = strings.TrimSpace(valueStr)
 
-	// Handle string literals
 	if isStringLiteral(valueStr) {
 		str := parseStringLiteral(valueStr)
 		var result []uint32
@@ -199,7 +191,6 @@ func parseSingleValue(valueStr string) []uint32 {
 		}
 		return result
 	} else if valueStr != "" {
-		// Handle numeric values
 		value, err := strconv.ParseUint(valueStr, 0, 32)
 		if err != nil {
 			panic("Invalid value in mixed data: " + valueStr)
@@ -209,14 +200,12 @@ func parseSingleValue(valueStr string) []uint32 {
 	return nil
 }
 
-
-
 func (p *Parser) parseWordData(name, valueStr string) {
 	values := parseValues(valueStr)
 	for _, val := range values {
 		p.CurrentSector.Data = append(p.CurrentSector.Data, &Data{
 			Name:  name,
-			Size:  2,  // 2 bytes per DW entry
+			Size:  2,
 			Value: uint32(val),
 		})
 	}
@@ -227,14 +216,13 @@ func (p *Parser) parseDwordData(name, valueStr string) {
 	for _, val := range values {
 		p.CurrentSector.Data = append(p.CurrentSector.Data, &Data{
 			Name:  name,
-			Size:  4,  // 4 bytes per DD entry
+			Size:  4,	
 			Value: uint32(val),
 		})
 	}
 }
 
 func parseValues(valueStr string) []uint32 {
-	// Split by commas for arrays
 	valueParts := strings.Split(valueStr, ",")
 	var valueArray []uint32
 	for _, v := range valueParts {
@@ -255,7 +243,6 @@ func isStringLiteral(valueStr string) bool {
 }
 
 func parseStringLiteral(valueStr string) string {
-	// Remove the quotes and return the string inside
 	return valueStr[1 : len(valueStr)-1]
 }
 

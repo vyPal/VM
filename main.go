@@ -116,6 +116,10 @@ func main() {
 			}
 			video.Text = ""
 			for i := 0; i < 37*27; i++ {
+				if c.Memory.Read(0xFFFFF000+uint32(i)) == 0 {
+					video.Text += " "
+					continue
+				}
 				video.Text += fmt.Sprintf("%c", c.Memory.Read(0xFFFFF000+uint32(i)))
 			}
 
