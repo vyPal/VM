@@ -111,7 +111,9 @@ Labels can be defined in the `.TEXT` section to make the code more readable. Lab
 Label addresses are calculated at assembly time and are not stored in the bytecode.
 ```asm
 .TEXT
-    <label>: ; Define a label
+<label>: ; Define a label
+    JMP [<label>] ; Jump to a label
+    LD R0 [<label>] ; Load the address of a label into a register
 ```
 
 ### Stack
@@ -130,6 +132,9 @@ Constants can be defined in the `DATA` section. The syntax is as follows:
 .DATA
     <name> <size> <value> ; Define a constant with a name, size (in bytes), and value
     <name> <size> {<value>, <value>, ...} ; Define an array of constants, the size should be the size of individual elements
+
+.TEXT
+    LD R0 [<name>] ; Load the value of a constant into a register
 ```
 
 ### Sectors
