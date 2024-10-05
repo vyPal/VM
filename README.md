@@ -144,4 +144,56 @@ This can also be used to load the program at a specific address in memory, inclu
 ```asm
 ORG 0x00000000 ; Any data or instructions after this will be loaded at this address
 ```
+## Encoding instructions
+Each instruction is encoded as an array of bytes. The first byte is the opcode, followed by the operands.
+
+### Encoding Operands
+Each operand can either be a specific type, or can support multiple types. The operand types are as follows:
+- `0x00` - Reg
+- `0x01` - DMem
+- `0x02` - IMem
+- `0x03` - Imm
+
+Both DMem and IMem operands support some additional types:
+- `0x00` - Address
+- `0x01` - Register
+- `0x02` - Offset (Register + Immediate)
+
+If an operand supports multiple types, the operand type is encoded as a separate byte before the operand value.
+If the operand only supports one type, the operand value is directly encoded, and the type byte is omitted.
+
+#### Reg (Register)
+`(RegNum | RegSize << 4)`
+- `RegNum` - Register number (0-15)
+- `RegSize` - Register size (0-2)
+
+#### DMem (Direct Memory)
+Before the value itself, the type of the operand is encoded as a separate byte.
+
+Depending on the type, the operand value is encoded differently:
+- `Address` - 32-bit memory address (encoded as 4 bytes in little-endian)
+- `Register` - Register number (0-15)
+- `Offset` - Register number (0-15) and 32-bit immediate value (register number encoded first, then 4 bytes in little-endian)
+
+#### IMem (Indirect Memory)
+Same as DMem, the type of the operand is encoded as a separate byte before the value.
+
+#### Imm (Immediate)
+The immediate value is encoded as 4 bytes in little-endian.
+
+## Bytecode Format
+The bytecode format is a simple binary format that encodes the individual sectors of the program.
+
+### Header
+The bytecode file starts with a header that contains the following information:
+- `Magic` - 4 bytes (0x736F6265)
+- `SectorCount` - 4 bytes (Number of sectors in the file)
+- `StartAddress` - 4 bytes (Address to use as the initial instruction pointer)
+
+### Sectors
+Each sector is encoded as follows:
+- `StartAddress` - 4 bytes (Address to load the sector at)
+- `Size` - 4 bytes (Size of the sector in bytes)
+- `Data` - `Size` bytes (Sector data)
+
 
