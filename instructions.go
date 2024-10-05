@@ -1045,25 +1045,25 @@ func EncodeInstruction(inst *Instruction) []byte {
 			case DMem:
 				buf.WriteByte(byte(operand.Value.(*DMemOperand).Type))
 				if operand.Value.(*DMemOperand).Type == Address {
-					binary.Write(&buf, binary.BigEndian, operand.Value.(*DMemOperand).Addr)
+					binary.Write(&buf, binary.LittleEndian, operand.Value.(*DMemOperand).Addr)
 				} else if operand.Value.(*DMemOperand).Type == Register {
 					buf.WriteByte(byte(operand.Value.(*DMemOperand).Register))
 				} else {
 					buf.WriteByte(byte(operand.Value.(*DMemOperand).Register))
-					binary.Write(&buf, binary.BigEndian, operand.Value.(*DMemOperand).Addr)
+					binary.Write(&buf, binary.LittleEndian, operand.Value.(*DMemOperand).Addr)
 				}
 			case IMem:
 				buf.WriteByte(byte(operand.Value.(*IMemOperand).Type))
 				if operand.Value.(*IMemOperand).Type == Address {
-					binary.Write(&buf, binary.BigEndian, operand.Value.(*IMemOperand).Addr)
+					binary.Write(&buf, binary.LittleEndian, operand.Value.(*IMemOperand).Addr)
 				} else if operand.Value.(*IMemOperand).Type == Register {
 					buf.WriteByte(byte(operand.Value.(*IMemOperand).Register))
 				} else {
 					buf.WriteByte(byte(operand.Value.(*IMemOperand).Register))
-					binary.Write(&buf, binary.BigEndian, operand.Value.(*IMemOperand).Addr)
+					binary.Write(&buf, binary.LittleEndian, operand.Value.(*IMemOperand).Addr)
 				}
 			case Imm:
-				binary.Write(&buf, binary.BigEndian, operand.Value.(*ImmOperand).Value)
+				binary.Write(&buf, binary.LittleEndian, operand.Value.(*ImmOperand).Value)
 			}
 		} else {
 			switch operand.Type {
@@ -1074,27 +1074,27 @@ func EncodeInstruction(inst *Instruction) []byte {
 				buf.WriteByte(byte(DMem))
 				buf.WriteByte(byte(operand.Value.(*DMemOperand).Type))
 				if operand.Value.(*DMemOperand).Type == Address {
-					binary.Write(&buf, binary.BigEndian, operand.Value.(*DMemOperand).Addr)
+					binary.Write(&buf, binary.LittleEndian, operand.Value.(*DMemOperand).Addr)
 				} else if operand.Value.(*DMemOperand).Type == Register {
 					buf.WriteByte(byte(operand.Value.(*DMemOperand).Register))
 				} else {
 					buf.WriteByte(byte(operand.Value.(*DMemOperand).Register))
-					binary.Write(&buf, binary.BigEndian, operand.Value.(*DMemOperand).Addr)
+					binary.Write(&buf, binary.LittleEndian, operand.Value.(*DMemOperand).Addr)
 				}
 			case IMem:
 				buf.WriteByte(byte(IMem))
 				buf.WriteByte(byte(operand.Value.(*IMemOperand).Type))
 				if operand.Value.(*IMemOperand).Type == Address {
-					binary.Write(&buf, binary.BigEndian, operand.Value.(*IMemOperand).Addr)
+					binary.Write(&buf, binary.LittleEndian, operand.Value.(*IMemOperand).Addr)
 				} else if operand.Value.(*IMemOperand).Type == Register {
 					buf.WriteByte(byte(operand.Value.(*IMemOperand).Register))
 				} else {
 					buf.WriteByte(byte(operand.Value.(*IMemOperand).Register))
-					binary.Write(&buf, binary.BigEndian, operand.Value.(*IMemOperand).Addr)
+					binary.Write(&buf, binary.LittleEndian, operand.Value.(*IMemOperand).Addr)
 				}
 			case Imm:
 				buf.WriteByte(byte(Imm))
-				binary.Write(&buf, binary.BigEndian, operand.Value.(*ImmOperand).Value)
+				binary.Write(&buf, binary.LittleEndian, operand.Value.(*ImmOperand).Value)
 			}
 		}
 	}
@@ -1118,7 +1118,7 @@ func DecodeInstruction(mem *Memory, pc *uint32) *Instruction {
 				switch data[offset] {
 				case byte(Address):
 					data = append(data, mem.ReadN(*pc+uint32(offset+1), 4)...)
-					operands[i] = Operand{Type: DMem, Value: &DMemOperand{Type: Address, Addr: binary.BigEndian.Uint32(data[offset+1 : offset+5])}}
+					operands[i] = Operand{Type: DMem, Value: &DMemOperand{Type: Address, Addr: binary.LittleEndian.Uint32(data[offset+1 : offset+5])}}
 					offset += 5
 				case byte(Register):
 					data = append(data, mem.Read(*pc+uint32(offset+1)))
@@ -1127,7 +1127,7 @@ func DecodeInstruction(mem *Memory, pc *uint32) *Instruction {
 				case byte(Offset):
 					data = append(data, mem.Read(*pc+uint32(offset+1)))
 					data = append(data, mem.ReadN(*pc+uint32(offset+2), 4)...)
-					operands[i] = Operand{Type: DMem, Value: &DMemOperand{Type: Offset, Register: data[offset+1], Addr: binary.BigEndian.Uint32(data[offset+2 : offset+6])}}
+					operands[i] = Operand{Type: DMem, Value: &DMemOperand{Type: Offset, Register: data[offset+1], Addr: binary.LittleEndian.Uint32(data[offset+2 : offset+6])}}
 					offset += 6
 				}
 			case IMem:
@@ -1135,7 +1135,7 @@ func DecodeInstruction(mem *Memory, pc *uint32) *Instruction {
 				switch data[offset] {
 				case byte(Address):
 					data = append(data, mem.ReadN(*pc+uint32(offset+1), 4)...)
-					operands[i] = Operand{Type: IMem, Value: &IMemOperand{Type: Address, Addr: binary.BigEndian.Uint32(data[offset+1 : offset+5])}}
+					operands[i] = Operand{Type: IMem, Value: &IMemOperand{Type: Address, Addr: binary.LittleEndian.Uint32(data[offset+1 : offset+5])}}
 					offset += 5
 				case byte(Register):
 					data = append(data, mem.Read(*pc+uint32(offset+1)))
@@ -1144,12 +1144,12 @@ func DecodeInstruction(mem *Memory, pc *uint32) *Instruction {
 				case byte(Offset):
 					data = append(data, mem.Read(*pc+uint32(offset+1)))
 					data = append(data, mem.ReadN(*pc+uint32(offset+2), 4)...)
-					operands[i] = Operand{Type: IMem, Value: &IMemOperand{Type: Offset, Register: data[offset+1], Addr: binary.BigEndian.Uint32(data[offset+2 : offset+6])}}
+					operands[i] = Operand{Type: IMem, Value: &IMemOperand{Type: Offset, Register: data[offset+1], Addr: binary.LittleEndian.Uint32(data[offset+2 : offset+6])}}
 					offset += 6
 				}
 			case Imm:
 				data = append(data, mem.ReadN(*pc+uint32(offset), 4)...)
-				operands[i] = Operand{Type: Imm, Value: &ImmOperand{Value: binary.BigEndian.Uint32(data[offset : offset+4])}}
+				operands[i] = Operand{Type: Imm, Value: &ImmOperand{Value: binary.LittleEndian.Uint32(data[offset : offset+4])}}
 				offset += 4
 			}
 		} else {
@@ -1164,7 +1164,7 @@ func DecodeInstruction(mem *Memory, pc *uint32) *Instruction {
 				switch data[offset+1] {
 				case byte(Address):
 					data = append(data, mem.ReadN(*pc+uint32(offset+2), 4)...)
-					operands[i] = Operand{Type: DMem, Value: &DMemOperand{Type: Address, Addr: binary.BigEndian.Uint32(data[offset+2 : offset+6])}}
+					operands[i] = Operand{Type: DMem, Value: &DMemOperand{Type: Address, Addr: binary.LittleEndian.Uint32(data[offset+2 : offset+6])}}
 					offset += 6
 				case byte(Register):
 					data = append(data, mem.Read(*pc+uint32(offset+2)))
@@ -1173,13 +1173,13 @@ func DecodeInstruction(mem *Memory, pc *uint32) *Instruction {
 				case byte(Offset):
 					data = append(data, mem.Read(*pc+uint32(offset+2)))
 					data = append(data, mem.ReadN(*pc+uint32(offset+3), 4)...)
-					operands[i] = Operand{Type: DMem, Value: &DMemOperand{Type: Offset, Register: data[offset+2], Addr: binary.BigEndian.Uint32(data[offset+3 : offset+7])}}
+					operands[i] = Operand{Type: DMem, Value: &DMemOperand{Type: Offset, Register: data[offset+2], Addr: binary.LittleEndian.Uint32(data[offset+3 : offset+7])}}
 					offset += 7
 				}
 			case byte(IMem):
 			case byte(Imm):
 				data = append(data, mem.ReadN(*pc+uint32(offset+1), 4)...)
-				operands[i] = Operand{Type: Imm, Value: &ImmOperand{Value: binary.BigEndian.Uint32(data[offset+1 : offset+5])}}
+				operands[i] = Operand{Type: Imm, Value: &ImmOperand{Value: binary.LittleEndian.Uint32(data[offset+1 : offset+5])}}
 				offset += 5
 			}
 		}

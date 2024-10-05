@@ -1,10 +1,12 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"os"
 	"slices"
+	"strings"
 	"time"
 
 	ui "github.com/gizak/termui/v3"
@@ -12,11 +14,40 @@ import (
 )
 
 func main() {
+	generateBytecode := flag.Bool("bytecode", false, "Generate bytecode")
+	outputFilename := flag.String("output", "output.bin", "Output filename")
+	flag.Parse()
+
+	var bc *Bytecode
+	if strings.HasSuffix(flag.Args()[0], ".asm") {
+		p := &Parser{Filename: flag.Args()[0]}
+		p.DefaultBaseAddress = 0x80000000
+		p.Parse()
+		bc = ProgramToBytecode(p)
+	} else if strings.HasSuffix(flag.Args()[0], ".bin") {
+		fileContent, err := os.ReadFile(flag.Args()[0])
+		if err != nil {
+			log.Fatalf("failed to read file: %v", err)
+		}
+		bc, err = DecodeBytecode(fileContent)
+	} else {
+		log.Fatalf("unknown file type")
+	}
+
+	if *generateBytecode {
+		fileContent, err := EncodeBytecode(bc)
+		if err != nil {
+			log.Fatalf("failed to encode bytecode: %v", err)
+		}
+		err = os.WriteFile(*outputFilename, fileContent, 0644)
+		if err != nil {
+			log.Fatalf("failed to write file: %v", err)
+		}
+		return
+	}
+
 	c := NewCPU()
-	p := &Parser{Filename: os.Args[1]}
-	p.DefaultBaseAddress = 0x80000000
-	p.Parse()
-	c.LoadProgram(p)
+	c.LoadProgram(bc)
 
 	simulationDelay := 100 // ms per instruction
 
@@ -77,7 +108,7 @@ func main() {
 			case "c":
 				run = false
 				c.Reset()
-				c.LoadProgram(p)
+				c.LoadProgram(bc)
 			}
 		case <-ticker.C:
 			if run {
