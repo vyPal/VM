@@ -6,7 +6,7 @@
 LOOP:
   LD R0B [R1+list]
   ADD R0B 48
-  ST [R1+0xFFFFF000] R0B
+  ST [R1 + 0xFFFFF000] R0B
   ADD R1 1
   CMP R1 [len]
   JNE [LOOP]

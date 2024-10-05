@@ -192,9 +192,23 @@ func (p *Parser) ParseInstruction(line string) {
 		panic("Unknown instruction: " + opcode)
 	}
 	for i, arg := range args {
+		arg = strings.TrimSpace(arg)
 		if arg[0] == ';' {
 			args = args[:i]
-		}
+		} else if arg == "" {
+			args = args[:i]
+		} else if arg[0] == '[' {
+			for j := i + 1; j < len(args); j++ {
+				if strings.Contains(args[j], "]") {
+					oldArgs := args
+					args = append(args[:i], strings.Join(args[i:j+1], " "))
+					if j+1 < len(oldArgs) {
+						args = append(args, oldArgs[j+1:]...)
+					}
+					break
+				}
+			}
+		}	
 	}
 	if len(args) != len(instruction.Operands) {
 		panic("Invalid number of arguments for " + opcode)
