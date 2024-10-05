@@ -138,34 +138,78 @@ func (p *Parser) ParseData(line string) {
 }
 
 func (p *Parser) parseByteData(name, valueStr string) {
-	if isStringLiteral(valueStr) {
-		// Handle string literals
-		str := parseStringLiteral(valueStr)
-		for _, char := range str {
-			p.CurrentSector.Data = append(p.CurrentSector.Data, &Data{
-				Name:  name,
-				Size:  1,  // 1 byte for DB
-				Value: uint32(char),
-			})
-		}
-		// Null-terminate the string
+	// Handle comma-separated values as an array of bytes, including string literals and numbers
+	values := parseMixedValues(valueStr)
+	for _, val := range values {
 		p.CurrentSector.Data = append(p.CurrentSector.Data, &Data{
 			Name:  name,
-			Size:  1,
-			Value: 0, // Null-terminating the string
+			Size:  1,  // 1 byte per DB entry
+			Value: uint32(val),
 		})
-	} else {
-		// Handle comma-separated values as an array of bytes
-		values := parseValues(valueStr)
-		for _, val := range values {
-			p.CurrentSector.Data = append(p.CurrentSector.Data, &Data{
-				Name:  name,
-				Size:  1,  // 1 byte per DB entry
-				Value: uint32(val),
-			})
-		}
 	}
 }
+
+func parseMixedValues(valueStr string) []uint32 {
+	var valueArray []uint32
+	var currentBuffer strings.Builder
+	inString := false
+	escape := false
+
+	for i := 0; i < len(valueStr); i++ {
+		char := valueStr[i]
+
+		if escape {
+			// If we are escaping, append the escaped character and reset escape
+			currentBuffer.WriteByte(char)
+			escape = false
+		} else if char == '\\' {
+			// Handle escape sequences like \"
+			escape = true
+		} else if char == '"' && !escape {
+			// Toggle the inString flag when encountering a quote (if not escaped)
+			inString = !inString
+			currentBuffer.WriteByte(char)
+		} else if char == ',' && !inString {
+			// If we encounter a comma outside a string, process the current value
+			valueArray = append(valueArray, parseSingleValue(currentBuffer.String())...)
+			currentBuffer.Reset()
+		} else {
+			// Accumulate characters in the buffer
+			currentBuffer.WriteByte(char)
+		}
+	}
+
+	// Process the last value after the loop
+	if currentBuffer.Len() > 0 {
+		valueArray = append(valueArray, parseSingleValue(currentBuffer.String())...)
+	}
+
+	return valueArray
+}
+
+func parseSingleValue(valueStr string) []uint32 {
+	valueStr = strings.TrimSpace(valueStr)
+
+	// Handle string literals
+	if isStringLiteral(valueStr) {
+		str := parseStringLiteral(valueStr)
+		var result []uint32
+		for _, char := range str {
+			result = append(result, uint32(char))
+		}
+		return result
+	} else if valueStr != "" {
+		// Handle numeric values
+		value, err := strconv.ParseUint(valueStr, 0, 32)
+		if err != nil {
+			panic("Invalid value in mixed data: " + valueStr)
+		}
+		return []uint32{uint32(value)}
+	}
+	return nil
+}
+
+
 
 func (p *Parser) parseWordData(name, valueStr string) {
 	values := parseValues(valueStr)

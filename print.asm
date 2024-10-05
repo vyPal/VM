@@ -1,5 +1,5 @@
 .DATA
-  string DB "Hello, World!"
+  string DB "Hello, World!", 0
 .TEXT
 print_loop:
   LD R0B [R1 + string]
