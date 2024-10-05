@@ -116,48 +116,103 @@ func (p *Parser) ParseLabel(line string) {
 }
 
 func (p *Parser) ParseData(line string) {
-	parts := strings.Split(line, " ")
-	name := parts[0]
-	size, err := strconv.ParseUint(parts[1], 0, 32)
-	if err != nil {
-		panic("Invalid size for data: " + parts[1])
+	parts := strings.Fields(line)
+	if len(parts) < 3 {
+		panic("Invalid data declaration")
 	}
 
-	rest := strings.Join(parts[2:], " ")
+	name := parts[0]
+	directive := parts[1] // DB, DW, DD
+	valueStr := strings.Join(parts[2:], " ")
 
-	if strings.HasPrefix(rest, "{") && strings.HasSuffix(rest, "}") {
-		values := strings.Trim(rest, "{}")
-		valueParts := strings.Split(values, ",")
-		var valueArray []uint32
-		for _, v := range valueParts {
-			if strings.TrimSpace(v) == "" {
-				continue
-			}
-			value, err := strconv.ParseUint(strings.TrimSpace(v), 0, 32)
-			if err != nil {
-				panic("Invalid value in array: " + v)
-			}
-			valueArray = append(valueArray, uint32(value))
-		}
+	switch directive {
+	case "DB":
+		p.parseByteData(name, valueStr)
+	case "DW":
+		p.parseWordData(name, valueStr)
+	case "DD":
+		p.parseDwordData(name, valueStr)
+	default:
+		panic("Unknown data directive: " + directive)
+	}
+}
 
-		for _, v := range valueArray {
+func (p *Parser) parseByteData(name, valueStr string) {
+	if isStringLiteral(valueStr) {
+		// Handle string literals
+		str := parseStringLiteral(valueStr)
+		for _, char := range str {
 			p.CurrentSector.Data = append(p.CurrentSector.Data, &Data{
 				Name:  name,
-				Size:  uint32(size),
-				Value: v,
+				Size:  1,  // 1 byte for DB
+				Value: uint32(char),
 			})
 		}
-	} else {
-		value, err := strconv.ParseUint(rest, 0, 32)
-		if err != nil {
-			panic("Invalid value for data: " + rest)
-		}
+		// Null-terminate the string
 		p.CurrentSector.Data = append(p.CurrentSector.Data, &Data{
 			Name:  name,
-			Size:  uint32(size),
-			Value: uint32(value),
+			Size:  1,
+			Value: 0, // Null-terminating the string
+		})
+	} else {
+		// Handle comma-separated values as an array of bytes
+		values := parseValues(valueStr)
+		for _, val := range values {
+			p.CurrentSector.Data = append(p.CurrentSector.Data, &Data{
+				Name:  name,
+				Size:  1,  // 1 byte per DB entry
+				Value: uint32(val),
+			})
+		}
+	}
+}
+
+func (p *Parser) parseWordData(name, valueStr string) {
+	values := parseValues(valueStr)
+	for _, val := range values {
+		p.CurrentSector.Data = append(p.CurrentSector.Data, &Data{
+			Name:  name,
+			Size:  2,  // 2 bytes per DW entry
+			Value: uint32(val),
 		})
 	}
+}
+
+func (p *Parser) parseDwordData(name, valueStr string) {
+	values := parseValues(valueStr)
+	for _, val := range values {
+		p.CurrentSector.Data = append(p.CurrentSector.Data, &Data{
+			Name:  name,
+			Size:  4,  // 4 bytes per DD entry
+			Value: uint32(val),
+		})
+	}
+}
+
+func parseValues(valueStr string) []uint32 {
+	// Split by commas for arrays
+	valueParts := strings.Split(valueStr, ",")
+	var valueArray []uint32
+	for _, v := range valueParts {
+		if strings.TrimSpace(v) == "" {
+			continue
+		}
+		value, err := strconv.ParseUint(strings.TrimSpace(v), 0, 32)
+		if err != nil {
+			panic("Invalid value: " + v)
+		}
+		valueArray = append(valueArray, uint32(value))
+	}
+	return valueArray
+}
+
+func isStringLiteral(valueStr string) bool {
+	return strings.HasPrefix(valueStr, "\"") && strings.HasSuffix(valueStr, "\"")
+}
+
+func parseStringLiteral(valueStr string) string {
+	// Remove the quotes and return the string inside
+	return valueStr[1 : len(valueStr)-1]
 }
 
 func EncodeData(value, size uint32) []byte {

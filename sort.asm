@@ -1,7 +1,7 @@
 .DATA
-  list 1 {1, 2, 3, 4}
-  list2 1 {5, 6, 7, 8}
-  len 1 4
+  list DB 1, 2, 3, 4
+  list2 DB 5, 6, 7, 8
+  len DB 4
 .TEXT
 LOOP:
   LD R0B [R1+list]
