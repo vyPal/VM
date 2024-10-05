@@ -23,7 +23,9 @@ To assemble a file and save the bytecode to a file, use the `-bytecode` flag. If
 ## Assembly
 The VM uses a custom assembly language. The following instructions are supported:
 <details>
+
 <summary> List of instructions </summary>
+
 - `NOP` - No operation
 - `LD <r> <r/im/dm/i>` - Load a value into a register
 - `ST <dm/im> <r>` - Store a value from a register into memory
@@ -51,6 +53,7 @@ The VM uses a custom assembly language. The following instructions are supported
 - `PUSH <r/im/dm/i>` - Push a value onto the stack
 - `POP <r/im/dm>` - Pop a value from the stack
 - `HLT` - Halt the program
+
 </details>
 
 ### Registers
