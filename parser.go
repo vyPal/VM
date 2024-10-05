@@ -158,7 +158,19 @@ func parseMixedValues(valueStr string) []uint32 {
 		char := valueStr[i]
 
 		if escape {
-			currentBuffer.WriteByte(char)
+			// Handle special escape sequences like \n, \r, \t, etc.
+			switch char {
+			case 'n':
+				currentBuffer.WriteByte('\n')
+			case 'r':
+				currentBuffer.WriteByte('\r')
+			case 't':
+				currentBuffer.WriteByte('\t')
+			case '\\':
+				currentBuffer.WriteByte('\\')
+			default:
+				currentBuffer.WriteByte(char)
+			}
 			escape = false
 		} else if char == '\\' {
 			escape = true
