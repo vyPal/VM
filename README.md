@@ -26,6 +26,8 @@ The VM uses a custom assembly language. The following instructions are supported
 
 <summary> List of instructions </summary>
 
+(`r` - Register, `im` - Indirect Memory, `dm` - Direct Memory, `i` - Immediate)
+
 - `NOP` - No operation
 - `LD <r> <r/im/dm/i>` - Load a value into a register
 - `ST <dm/im> <r>` - Store a value from a register into memory
