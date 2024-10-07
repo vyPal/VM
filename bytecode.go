@@ -7,16 +7,16 @@ import (
 )
 
 type Bytecode struct {
-	MagicNumber uint32
-	SectorCount uint8
+	MagicNumber  uint32
+	SectorCount  uint8
 	StartAddress uint32
-	Sectors     []BCSector
+	Sectors      []BCSector
 }
 
 type BCSector struct {
 	StartAddress uint32
 	Length       uint32
-	Bytecode		 []byte
+	Bytecode     []byte
 }
 
 func NewBytecode(magicNumber uint32) *Bytecode {
@@ -133,5 +133,3 @@ func DecodeBytecode(data []byte) (*Bytecode, error) {
 
 	return bc, nil
 }
-
-

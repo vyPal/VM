@@ -228,7 +228,7 @@ func (p *Parser) parseDwordData(name, valueStr string) {
 	for _, val := range values {
 		p.CurrentSector.Data = append(p.CurrentSector.Data, &Data{
 			Name:  name,
-			Size:  4,	
+			Size:  4,
 			Value: uint32(val),
 		})
 	}
@@ -306,7 +306,7 @@ func (p *Parser) ParseInstruction(line string) {
 					break
 				}
 			}
-		}	
+		}
 	}
 	if len(args) != len(instruction.Operands) {
 		panic("Invalid number of arguments for " + opcode)
@@ -487,7 +487,16 @@ func (p *Parser) ParseOperand(arg string, operand *Operand, opName string) {
 		detectedType = Imm
 		parsedValue, err := strconv.ParseUint(arg, 0, 32)
 		if err != nil {
-			panic(arg + " is not a valid immediate value for " + opName + ": " + err.Error())
+			operand.Value = &ImmOperand{}
+			p.CurrentSector.PostParse = append(p.CurrentSector.PostParse, func() {
+				if val, ok := p.Labels[arg]; ok {
+					operand.Value.(*ImmOperand).Value = val
+				} else if val, ok := p.DataByName(arg); ok {
+					operand.Value.(*ImmOperand).Value = val.Address
+				} else {
+					panic("Unknown label: " + arg)
+				}
+			})
 		}
 		operand.Value = &ImmOperand{Value: uint32(parsedValue)}
 	}
