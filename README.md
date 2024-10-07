@@ -131,11 +131,17 @@ Constants can be defined in the `DATA` section. The syntax is as follows:
 ```asm
 .DATA
     <name> <size> <value> ; Define a constant with a name, size (in bytes), and value
-    <name> <size> {<value>, <value>, ...} ; Define an array of constants, the size should be the size of individual elements
+    <name> <size> <value>, <value>, ... ; Define an array of constants, the size should be the size of individual elements
 
 .TEXT
     LD R0 [<name>] ; Load the value of a constant into a register
+    LD R0 <name> ; Load the address in memory of the constant into a register
 ```
+
+The possible values for size are:
+- `DB` - Byte
+- `DW` - Word (16 bits)
+- `DD` - Double-word (32 bits)
 
 ### Sectors
 The assembly language allows the user to split the code into "sectors" by defining starting postitions for the `DATA` and `TEXT` sections. This is useful for creating libraries or splitting the code into multiple files.
