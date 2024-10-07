@@ -11,6 +11,8 @@ type Parser struct {
 	Filename           string
 	Contents           string
 	DefaultBaseAddress uint32
+	ExplicitStart			 bool
+	StartAddress			 uint32
 	Labels             map[string]uint32
 	Sectors            []*Sector
 
@@ -113,6 +115,13 @@ func (p *Parser) ParseSection(line string) {
 func (p *Parser) ParseLabel(line string) {
 	label := line[:len(line)-1]
 	p.Labels[label] = p.CurrentSector.BaseAddress + uint32(len(p.CurrentSector.Program))
+	if label == "_start" {
+		if p.ExplicitStart {
+			panic("Multiple _start labels found")
+		}
+		p.ExplicitStart = true
+		p.StartAddress = p.CurrentSector.BaseAddress + uint32(len(p.CurrentSector.Program))
+	}
 }
 
 func (p *Parser) ParseData(line string) {

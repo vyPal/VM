@@ -32,7 +32,7 @@ func ProgramToBytecode(program *Parser) *Bytecode {
 	firstSectorWithInstructions := -1
 
 	for _, sector := range program.Sectors {
-		if len(sector.Instructions) > 0 && firstSectorWithInstructions == -1 {
+		if len(sector.Instructions) > 0 && firstSectorWithInstructions == -1 && !program.ExplicitStart {
 			firstSectorWithInstructions = len(bytecode.Sectors)
 			bytecode.StartAddress = sector.BaseAddress
 		}
@@ -43,6 +43,10 @@ func ProgramToBytecode(program *Parser) *Bytecode {
 		}
 		bytecode.Sectors = append(bytecode.Sectors, bcSector)
 		bytecode.SectorCount++
+	}
+
+	if program.ExplicitStart {
+		bytecode.StartAddress = program.StartAddress
 	}
 
 	return bytecode
