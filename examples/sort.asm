@@ -7,7 +7,7 @@ LOOP:
   LD R0B [R1+list]
   ADD R0B 48
   ST [R1 + 0xFFFFF000] R0B
-  ADD R1 1
+  INC R1
   CMP R1 [len]
   JNE [LOOP]
   JMP [RAMPROG]
@@ -19,7 +19,7 @@ RLP:
   LD R0B [R1+list2]
   ADD R0B 48
   ST [R1+0xFFFFF004] R0B
-  ADD R1 1
+  INC R1
   CMP R1 [len]
   JNE [RLP]
   HLT
