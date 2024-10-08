@@ -6,8 +6,9 @@ type CPU struct {
 	PC                  uint32
 	Halted              bool
 	LastAccessedAddress uint32
-	FileTable map[uint32]*File
-	NextFD uint32
+	FileSystem          *VFS
+	FileTable           map[uint32]*File
+	NextFD              uint32
 }
 
 func NewCPU() *CPU {
