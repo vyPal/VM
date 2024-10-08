@@ -11,8 +11,8 @@ type Parser struct {
 	Filename           string
 	Contents           string
 	DefaultBaseAddress uint32
-	ExplicitStart			 bool
-	StartAddress			 uint32
+	ExplicitStart      bool
+	StartAddress       uint32
 	Labels             map[string]uint32
 	Sectors            []*Sector
 
