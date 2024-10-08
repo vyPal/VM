@@ -1032,6 +1032,40 @@ var instructionSet = map[uint8]*Instruction{
 			cpu.Halted = true
 		},
 	},
+	0x1B: {
+		Opcode: 0x1B,
+		Name: "INC",
+		Execute: func(cpu *CPU, operands []Operand) {
+			r := operands[0].Value.(*RegOperand)
+			if r.Size == 0x0 {
+				cpu.Registers[r.RegNum]++
+			} else if r.Size == 0x1 {
+				cpu.Registers[r.RegNum] = uint32(uint16(cpu.Registers[r.RegNum]) + 1)
+			} else if r.Size == 0x2 {
+				cpu.Registers[r.RegNum] = uint32(uint8(cpu.Registers[r.RegNum]) + 1)
+			}
+		},
+		Operands: []Operand{
+			{Type: Reg}, // A - Dest
+		},
+	},
+	0x1C: {
+		Opcode: 0x1C,
+		Name: "DEC",
+		Execute: func(cpu *CPU, operands []Operand) {
+			r := operands[0].Value.(*RegOperand)
+			if r.Size == 0x0 {
+				cpu.Registers[r.RegNum]--
+			} else if r.Size == 0x1 {
+				cpu.Registers[r.RegNum] = uint32(uint16(cpu.Registers[r.RegNum]) - 1)
+			} else if r.Size == 0x2 {
+				cpu.Registers[r.RegNum] = uint32(uint8(cpu.Registers[r.RegNum]) - 1)
+			}
+		},
+		Operands: []Operand{
+			{Type: Reg}, // A - Dest
+		},
+	},
 }
 
 func EncodeInstruction(inst *Instruction) []byte {
