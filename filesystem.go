@@ -16,9 +16,7 @@ type VFS interface {
 	Seek(*File, int64, int) (int64, error)
 }
 
-type File struct {
-	Name string
-	File *os.File
+type File interface {
 }
 
 type FileInfo struct {
@@ -31,21 +29,26 @@ type FolderBasedVFS struct {
 	Root string
 }
 
-func (vfs *FolderBasedVFS) Open(name string) (*File, error) {
+type FolderBasedFile struct {
+	Name string
+	File *os.File
+}
+
+func (vfs *FolderBasedVFS) Open(name string) (*FolderBasedFile, error) {
 	file, err := os.Open(name)
-	return &File{
+	return &FolderBasedFile{
 		Name: name,
 		File: file,
 	}, err
 }
 
-func (vfs *FolderBasedVFS) Close(file *File) error {
+func (vfs *FolderBasedVFS) Close(file *FolderBasedFile) error {
 	return file.File.Close()
 }
 
-func (vfs *FolderBasedVFS) Create(name string) (*File, error) {
+func (vfs *FolderBasedVFS) Create(name string) (*FolderBasedFile, error) {
 	file, err := os.Create(name)
-	return &File{
+	return &FolderBasedFile{
 		Name: name,
 		File: file,
 	}, err
@@ -81,22 +84,22 @@ func (vfs *FolderBasedVFS) ReadDir(name string) ([]*FileInfo, error) {
 	return fileInfos, err
 }
 
-func (vfs *FolderBasedVFS) Read(file *File, b []byte) (int, error) {
+func (vfs *FolderBasedVFS) Read(file *FolderBasedFile, b []byte) (int, error) {
 	return file.File.Read(b)
 }
 
-func (vfs *FolderBasedVFS) Write(file *File, b []byte) (int, error) {
+func (vfs *FolderBasedVFS) Write(file *FolderBasedFile, b []byte) (int, error) {
 	return file.File.Write(b)
 }
 
-func (vfs *FolderBasedVFS) ReadAt(file *File, b []byte, off int64) (int, error) {
+func (vfs *FolderBasedVFS) ReadAt(file *FolderBasedFile, b []byte, off int64) (int, error) {
 	return file.File.ReadAt(b, off)
 }
 
-func (vfs *FolderBasedVFS) WriteAt(file *File, b []byte, off int64) (int, error) {
+func (vfs *FolderBasedVFS) WriteAt(file *FolderBasedFile, b []byte, off int64) (int, error) {
 	return file.File.WriteAt(b, off)
 }
 
-func (vfs *FolderBasedVFS) Seek(file *File, off int64, whence int) (int64, error) {
+func (vfs *FolderBasedVFS) Seek(file *FolderBasedFile, off int64, whence int) (int64, error) {
 	return file.File.Seek(off, whence)
 }

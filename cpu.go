@@ -7,6 +7,8 @@ type CPU struct {
 	Stack               *Stack
 	Halted              bool
 	LastAccessedAddress uint32
+	FileTable map[uint32]*File
+	NextFD uint32
 }
 
 type Stack struct {
