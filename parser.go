@@ -1,16 +1,18 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"slices"
+	"sort"
 	"strconv"
 	"strings"
 )
 
 type Parser struct {
 	DefaultBaseAddress uint32
-	ExplicitStart			 bool
-	StartAddress			 uint32
+	ExplicitStart      bool
+	StartAddress       uint32
 	Labels             map[string]uint32
 	Sectors            []*Sector
 
@@ -45,17 +47,15 @@ func (p *Parser) DataByName(name string) (*Data, bool) {
 }
 
 func NewParser() *Parser {
-	currentSector := &Sector{BaseAddress: 0}
 	return &Parser{
 		DefaultBaseAddress: 0,
 		Labels:             make(map[string]uint32),
-		Sectors:            []*Sector{currentSector},
-		CurrentSector:      currentSector,
+		Sectors:            []*Sector{},
 	}
 }
 
 func (p *Parser) AddFile(filename string) {
-	if len(p.CurrentSector.Instructions) > 0 || len(p.CurrentSector.Data) > 0 {
+	if p.CurrentSector == nil || len(p.CurrentSector.Instructions) > 0 || len(p.CurrentSector.Data) > 0 {
 		p.CurrentSector = &Sector{BaseAddress: p.DefaultBaseAddress}
 		p.Sectors = append(p.Sectors, p.CurrentSector)
 	}
@@ -64,14 +64,21 @@ func (p *Parser) AddFile(filename string) {
 	if err != nil {
 		panic(err)
 	}
+
+	sectorsToEncode := []*Sector{}
+	lastSector := p.CurrentSector
 	for _, line := range strings.Split(string(contents), "\n") {
 		p.ParseLine(line)
+		if p.CurrentSector != lastSector {
+			sectorsToEncode = append(sectorsToEncode, lastSector)
+			lastSector = p.CurrentSector
+		}
 	}
 
-	for i := 0; i < len(p.Sectors); i++ {
-		if len(p.Sectors[i].Instructions) == 0 && len(p.Sectors[i].Data) == 0 {
-			p.Sectors = append(p.Sectors[:i], p.Sectors[i+1:]...)
-			i--
+	for _, sector := range sectorsToEncode {
+		for _, data := range sector.Data {
+			data.Address = sector.BaseAddress + uint32(len(sector.Program))
+			sector.Program = append(sector.Program, EncodeData(data.Value, data.Size)...)
 		}
 	}
 
@@ -90,16 +97,32 @@ func (p *Parser) UpdateDefaultBaseAddress() {
 		}
 	}
 
-	p.DefaultBaseAddress = lastRomEnd
+	p.DefaultBaseAddress = lastRomEnd + 1
+}
+
+func (p *Parser) CheckForOverlappingSectors() error {
+	sort.Slice(p.Sectors, func(i, j int) bool {
+		return p.Sectors[i].BaseAddress < p.Sectors[j].BaseAddress
+	})
+
+	for i := 1; i < len(p.Sectors); i++ {
+		prevSector := p.Sectors[i-1]
+		currentSector := p.Sectors[i]
+
+		prevEnd := prevSector.BaseAddress + uint32(len(prevSector.Program))
+
+		if currentSector.BaseAddress < prevEnd {
+			return fmt.Errorf(
+				"Overlap detected between sector starting at 0x%08X and sector starting at 0x%08X",
+				prevSector.BaseAddress, currentSector.BaseAddress,
+			)
+		}
+	}
+
+	return nil
 }
 
 func (p *Parser) Parse() {
-	for _, sector := range p.Sectors {
-		for _, data := range sector.Data {
-			data.Address = sector.BaseAddress + uint32(len(sector.Program))
-			sector.Program = append(sector.Program, EncodeData(data.Value, data.Size)...)
-		}
-	}
 	for _, sector := range p.Sectors {
 		for _, postParse := range sector.PostParse {
 			postParse()

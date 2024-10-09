@@ -1034,7 +1034,7 @@ var instructionSet = map[uint8]*Instruction{
 	},
 	0x1B: {
 		Opcode: 0x1B,
-		Name: "INC",
+		Name:   "INC",
 		Execute: func(cpu *CPU, operands []Operand) {
 			r := operands[0].Value.(*RegOperand)
 			if r.Size == 0x0 {
@@ -1051,7 +1051,7 @@ var instructionSet = map[uint8]*Instruction{
 	},
 	0x1C: {
 		Opcode: 0x1C,
-		Name: "DEC",
+		Name:   "DEC",
 		Execute: func(cpu *CPU, operands []Operand) {
 			r := operands[0].Value.(*RegOperand)
 			if r.Size == 0x0 {

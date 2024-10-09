@@ -26,7 +26,7 @@ func main() {
 		if strings.HasSuffix(filename, ".asm") {
 			isAsm = true
 			p.AddFile(filename)
-		
+
 		} else if strings.HasSuffix(flag.Args()[0], ".bin") {
 			if isAsm {
 				log.Fatalf("cannot mix .asm and .bin files")
@@ -43,6 +43,10 @@ func main() {
 
 	if isAsm {
 		p.Parse()
+		err := p.CheckForOverlappingSectors()
+		if err != nil {
+			log.Fatalf("overlapping sectors: %v", err)
+		}
 		bc = ProgramToBytecode(p)
 	}
 
