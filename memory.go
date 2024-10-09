@@ -93,6 +93,19 @@ func (m *Memory) ReadN(addr uint32, n uint32) []uint8 {
 	return data
 }
 
+func (m *Memory) ReadString(addr uint32) string {
+	var data []uint8
+	for {
+		d := m.Read(addr)
+		if d == 0 {
+			break
+		}
+		data = append(data, d)
+		addr++
+	}
+	return string(data)
+}
+
 func (m *Memory) Write(addr uint32, data uint8) {
 	switch {
 	case addr < 0x80000000:
