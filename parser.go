@@ -55,6 +55,11 @@ func NewParser() *Parser {
 }
 
 func (p *Parser) AddFile(filename string) {
+	if len(p.CurrentSector.Instructions) > 0 || len(p.CurrentSector.Data) > 0 {
+		p.CurrentSector = &Sector{BaseAddress: p.DefaultBaseAddress}
+		p.Sectors = append(p.Sectors, p.CurrentSector)
+	}
+
 	contents, err := os.ReadFile(filename)
 	if err != nil {
 		panic(err)
@@ -69,6 +74,23 @@ func (p *Parser) AddFile(filename string) {
 			i--
 		}
 	}
+
+	p.UpdateDefaultBaseAddress()
+}
+
+func (p *Parser) UpdateDefaultBaseAddress() {
+	var lastRomEnd uint32 = 0x80000000 // Start of ROM
+
+	for _, sector := range p.Sectors {
+		if sector.BaseAddress >= 0x80000000 {
+			sectorEnd := sector.BaseAddress + uint32(len(sector.Program))
+			if sectorEnd > lastRomEnd {
+				lastRomEnd = sectorEnd
+			}
+		}
+	}
+
+	p.DefaultBaseAddress = lastRomEnd
 }
 
 func (p *Parser) Parse() {
