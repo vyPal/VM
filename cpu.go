@@ -7,8 +7,8 @@ type CPU struct {
 	Stack               *Stack
 	Halted              bool
 	LastAccessedAddress uint32
-	FileSystem          *VFS
-	FileTable           map[uint32]*File
+	FileSystem          VFS
+	FileTable           map[uint32]interface{}
 	NextFD              uint32
 }
 
@@ -40,6 +40,9 @@ func NewCPU() *CPU {
 		Registers: [16]uint32{},
 		PC:        0,
 		Stack:     NewStack(),
+		Halted:    false,
+		FileTable: make(map[uint32]interface{}),
+		NextFD:    0,
 	}
 }
 

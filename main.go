@@ -16,7 +16,22 @@ import (
 func main() {
 	generateBytecode := flag.Bool("bytecode", false, "Generate bytecode")
 	outputFilename := flag.String("output", "output.bin", "Output filename")
+	fsType := flag.String("fs", "folder", "Filesystem type")
+	fsRoot := flag.String("root", "./vmdata", "Root folder")
 	flag.Parse()
+
+	var fs VFS
+	if *fsType == "folder" {
+		if _, err := os.Stat(*fsRoot); os.IsNotExist(err) {
+			err := os.Mkdir(*fsRoot, 0755)
+			if err != nil {
+				log.Fatalf("failed to create root folder: %v", err)
+			}
+		}
+		fs = &FolderBasedVFS{Root: *fsRoot}
+	} else {
+		log.Fatalf("unknown filesystem type")
+	}
 
 	var bc *Bytecode
 	if strings.HasSuffix(flag.Args()[0], ".asm") {
@@ -47,6 +62,7 @@ func main() {
 	}
 
 	c := NewCPU()
+	c.FileSystem = fs
 	c.LoadProgram(bc)
 
 	simulationDelay := 100 // ms per instruction

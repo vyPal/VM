@@ -1034,7 +1034,7 @@ var instructionSet = map[uint8]*Instruction{
 	},
 	0x1B: {
 		Opcode: 0x1B,
-		Name: "INC",
+		Name:   "INC",
 		Execute: func(cpu *CPU, operands []Operand) {
 			r := operands[0].Value.(*RegOperand)
 			if r.Size == 0x0 {
@@ -1051,7 +1051,7 @@ var instructionSet = map[uint8]*Instruction{
 	},
 	0x1C: {
 		Opcode: 0x1C,
-		Name: "DEC",
+		Name:   "DEC",
 		Execute: func(cpu *CPU, operands []Operand) {
 			r := operands[0].Value.(*RegOperand)
 			if r.Size == 0x0 {
@@ -1064,6 +1064,159 @@ var instructionSet = map[uint8]*Instruction{
 		},
 		Operands: []Operand{
 			{Type: Reg}, // A - Dest
+		},
+	},
+	0x1D: {
+		Opcode: 0x1D,
+		Name:   "OPEN",
+		Execute: func(cpu *CPU, operands []Operand) {
+			r := operands[0].Value.(*RegOperand)
+			fd := cpu.NextFD
+			var err error
+			switch operands[1].Type {
+			case DMem:
+				cpu.LastAccessedAddress = operands[1].Value.(*DMemOperand).ComputeAddress(cpu)
+				cpu.FileTable[fd], err = cpu.FileSystem.Open(cpu.Memory.ReadString(operands[1].Value.(*DMemOperand).ComputeAddress(cpu)))
+			case IMem:
+				cpu.LastAccessedAddress = cpu.Memory.ReadDWord(operands[1].Value.(*IMemOperand).ComputeAddress(cpu))
+				cpu.FileTable[fd], err = cpu.FileSystem.Open(cpu.Memory.ReadString(cpu.Memory.ReadDWord(operands[1].Value.(*IMemOperand).ComputeAddress(cpu))))
+			}
+			if err != nil {
+				cpu.Registers[r.RegNum] = 0xFFFFFFFF
+			} else {
+				cpu.Registers[r.RegNum] = uint32(fd)
+				cpu.NextFD++
+			}
+		},
+		Operands: []Operand{
+			{Type: Reg}, // A - Dest
+			{AllowedTypes: []OperandType{DMem, IMem}}, // B - Filename
+		},
+	},
+	0x1E: {
+		Opcode: 0x1E,
+		Name:   "READ",
+		Execute: func(cpu *CPU, operands []Operand) {
+			fd := cpu.Registers[operands[0].Value.(*RegOperand).RegNum]
+			var length uint32
+			switch operands[2].Type {
+			case Reg:
+				length = cpu.Registers[operands[2].Value.(*RegOperand).RegNum]
+			case DMem:
+				cpu.LastAccessedAddress = operands[2].Value.(*DMemOperand).ComputeAddress(cpu)
+				length = cpu.Memory.ReadDWord(operands[2].Value.(*DMemOperand).ComputeAddress(cpu))
+			case IMem:
+				cpu.LastAccessedAddress = cpu.Memory.ReadDWord(operands[2].Value.(*IMemOperand).ComputeAddress(cpu))
+				length = cpu.Memory.ReadDWord(cpu.Memory.ReadDWord(operands[2].Value.(*IMemOperand).ComputeAddress(cpu)))
+			case Imm:
+				length = operands[2].Value.(*ImmOperand).Value
+			}
+
+			if length == 0 {
+				cpu.Registers[0xF] = 0xFFFFFFFF
+				return
+			}
+
+			if operands[1].Type == Reg && length > 1 {
+				cpu.Registers[0xF] = 0xFFFFFFFF
+				return
+			}
+
+			data := make([]byte, length)
+			n, err := cpu.FileSystem.Read(cpu.FileTable[fd], data)
+			if err != nil {
+				cpu.Registers[0xF] = 0xFFFFFFFF
+			} else {
+				cpu.Registers[0xF] = uint32(n)
+				switch operands[1].Type {
+				case Reg:
+					cpu.Registers[operands[1].Value.(*RegOperand).RegNum] = uint32(n)
+				case DMem:
+					cpu.LastAccessedAddress = operands[1].Value.(*DMemOperand).ComputeAddress(cpu)
+					for i, b := range data {
+						cpu.Memory.Write(operands[1].Value.(*DMemOperand).ComputeAddress(cpu)+uint32(i), b)
+					}
+				case IMem:
+					cpu.LastAccessedAddress = cpu.Memory.ReadDWord(operands[1].Value.(*IMemOperand).ComputeAddress(cpu))
+					for i, b := range data {
+						cpu.Memory.Write(cpu.Memory.ReadDWord(operands[1].Value.(*IMemOperand).ComputeAddress(cpu))+uint32(i), b)
+					}
+				}
+			}
+		},
+		Operands: []Operand{
+			{Type: Reg}, // A - FD
+			{AllowedTypes: []OperandType{Reg, DMem, IMem}},      // B - Dest
+			{AllowedTypes: []OperandType{Reg, DMem, IMem, Imm}}, // C - Length
+		},
+	},
+	0x1F: {
+		Opcode: 0x1F,
+		Name:   "WRITE",
+		Execute: func(cpu *CPU, operands []Operand) {
+			fd := cpu.Registers[operands[0].Value.(*RegOperand).RegNum]
+			var length uint32
+			switch operands[2].Type {
+			case Reg:
+				length = cpu.Registers[operands[2].Value.(*RegOperand).RegNum]
+			case DMem:
+				cpu.LastAccessedAddress = operands[2].Value.(*DMemOperand).ComputeAddress(cpu)
+				length = cpu.Memory.ReadDWord(operands[2].Value.(*DMemOperand).ComputeAddress(cpu))
+			case IMem:
+				cpu.LastAccessedAddress = cpu.Memory.ReadDWord(operands[2].Value.(*IMemOperand).ComputeAddress(cpu))
+				length = cpu.Memory.ReadDWord(cpu.Memory.ReadDWord(operands[2].Value.(*IMemOperand).ComputeAddress(cpu)))
+			case Imm:
+				length = operands[2].Value.(*ImmOperand).Value
+			}
+
+			if length == 0 {
+				cpu.Registers[0xF] = 0xFFFFFFFF
+				return
+			}
+
+			data := make([]byte, length)
+			switch operands[1].Type {
+			case Reg:
+				if length > 1 {
+					cpu.Registers[0xF] = 0xFFFFFFFF
+					return
+				}
+				data[0] = byte(cpu.Registers[operands[1].Value.(*RegOperand).RegNum])
+			case DMem:
+				cpu.LastAccessedAddress = operands[1].Value.(*DMemOperand).ComputeAddress(cpu)
+				for i := range data {
+					data[i] = cpu.Memory.Read(operands[1].Value.(*DMemOperand).ComputeAddress(cpu) + uint32(i))
+				}
+			case IMem:
+				cpu.LastAccessedAddress = cpu.Memory.ReadDWord(operands[1].Value.(*IMemOperand).ComputeAddress(cpu))
+				for i := range data {
+					data[i] = cpu.Memory.Read(cpu.Memory.ReadDWord(operands[1].Value.(*IMemOperand).ComputeAddress(cpu)) + uint32(i))
+				}
+			}
+
+			n, err := cpu.FileSystem.Write(cpu.FileTable[fd], data)
+			if err != nil {
+				cpu.Registers[0xF] = 0xFFFFFFFF
+			} else {
+				cpu.Registers[0xF] = uint32(n)
+			}
+		},
+		Operands: []Operand{
+			{Type: Reg}, // A - FD
+			{AllowedTypes: []OperandType{Reg, DMem, IMem}},      // B - Source
+			{AllowedTypes: []OperandType{Reg, DMem, IMem, Imm}}, // C - Length
+		},
+	},
+	0x20: {
+		Opcode: 0x20,
+		Name:   "CLOSE",
+		Execute: func(cpu *CPU, operands []Operand) {
+			fd := cpu.Registers[operands[0].Value.(*RegOperand).RegNum]
+			cpu.FileSystem.Close(cpu.FileTable[fd])
+			cpu.FileTable[fd] = nil
+		},
+		Operands: []Operand{
+			{Type: Reg}, // A - FD
 		},
 	},
 }
