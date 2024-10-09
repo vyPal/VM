@@ -19,19 +19,31 @@ func main() {
 	flag.Parse()
 
 	var bc *Bytecode
-	if strings.HasSuffix(flag.Args()[0], ".asm") {
-		p := &Parser{Filename: flag.Args()[0]}
-		p.DefaultBaseAddress = 0x80000000
+	isAsm := false
+	p := NewParser()
+	p.DefaultBaseAddress = 0x80000000
+	for _, filename := range flag.Args() {
+		if strings.HasSuffix(filename, ".asm") {
+			isAsm = true
+			p.AddFile(filename)
+		
+		} else if strings.HasSuffix(flag.Args()[0], ".bin") {
+			if isAsm {
+				log.Fatalf("cannot mix .asm and .bin files")
+			}
+			fileContent, err := os.ReadFile(filename)
+			if err != nil {
+				log.Fatalf("failed to read file: %v", err)
+			}
+			bc, err = DecodeBytecode(fileContent)
+		} else {
+			log.Fatalf("unknown file type")
+		}
+	}
+
+	if isAsm {
 		p.Parse()
 		bc = ProgramToBytecode(p)
-	} else if strings.HasSuffix(flag.Args()[0], ".bin") {
-		fileContent, err := os.ReadFile(flag.Args()[0])
-		if err != nil {
-			log.Fatalf("failed to read file: %v", err)
-		}
-		bc, err = DecodeBytecode(fileContent)
-	} else {
-		log.Fatalf("unknown file type")
 	}
 
 	if *generateBytecode {

@@ -8,8 +8,6 @@ import (
 )
 
 type Parser struct {
-	Filename           string
-	Contents           string
 	DefaultBaseAddress uint32
 	ExplicitStart			 bool
 	StartAddress			 uint32
@@ -46,17 +44,22 @@ func (p *Parser) DataByName(name string) (*Data, bool) {
 	return nil, false
 }
 
-func (p *Parser) Parse() {
-	contents, err := os.ReadFile(p.Filename)
+func NewParser() *Parser {
+	currentSector := &Sector{BaseAddress: 0}
+	return &Parser{
+		DefaultBaseAddress: 0,
+		Labels:             make(map[string]uint32),
+		Sectors:            []*Sector{currentSector},
+		CurrentSector:      currentSector,
+	}
+}
+
+func (p *Parser) AddFile(filename string) {
+	contents, err := os.ReadFile(filename)
 	if err != nil {
 		panic(err)
 	}
-	p.Contents = string(contents)
-	p.Labels = make(map[string]uint32)
-	p.Sectors = []*Sector{}
-	p.CurrentSector = &Sector{BaseAddress: p.DefaultBaseAddress}
-	p.Sectors = append(p.Sectors, p.CurrentSector)
-	for _, line := range strings.Split(p.Contents, "\n") {
+	for _, line := range strings.Split(string(contents), "\n") {
 		p.ParseLine(line)
 	}
 
@@ -66,7 +69,9 @@ func (p *Parser) Parse() {
 			i--
 		}
 	}
+}
 
+func (p *Parser) Parse() {
 	for _, sector := range p.Sectors {
 		for _, data := range sector.Data {
 			data.Address = sector.BaseAddress + uint32(len(sector.Program))
