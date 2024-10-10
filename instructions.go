@@ -1076,10 +1076,10 @@ var instructionSet = map[uint8]*Instruction{
 			switch operands[1].Type {
 			case DMem:
 				cpu.LastAccessedAddress = operands[1].Value.(*DMemOperand).ComputeAddress(cpu)
-				cpu.FileTable[fd], err = cpu.FileSystem.Open(cpu.Memory.ReadString(operands[1].Value.(*DMemOperand).ComputeAddress(cpu)))
+				cpu.FileTable[fd], err = cpu.FileSystem.Open(cpu.MemoryManager.ReadMemoryString(operands[1].Value.(*DMemOperand).ComputeAddress(cpu)))
 			case IMem:
-				cpu.LastAccessedAddress = cpu.Memory.ReadDWord(operands[1].Value.(*IMemOperand).ComputeAddress(cpu))
-				cpu.FileTable[fd], err = cpu.FileSystem.Open(cpu.Memory.ReadString(cpu.Memory.ReadDWord(operands[1].Value.(*IMemOperand).ComputeAddress(cpu))))
+				cpu.LastAccessedAddress = cpu.MemoryManager.ReadMemoryDWord(operands[1].Value.(*IMemOperand).ComputeAddress(cpu))
+				cpu.FileTable[fd], err = cpu.FileSystem.Open(cpu.MemoryManager.ReadMemoryString(cpu.MemoryManager.ReadMemoryDWord(operands[1].Value.(*IMemOperand).ComputeAddress(cpu))))
 			}
 			if err != nil {
 				cpu.Registers[r.RegNum] = 0xFFFFFFFF
@@ -1104,10 +1104,10 @@ var instructionSet = map[uint8]*Instruction{
 				length = cpu.Registers[operands[2].Value.(*RegOperand).RegNum]
 			case DMem:
 				cpu.LastAccessedAddress = operands[2].Value.(*DMemOperand).ComputeAddress(cpu)
-				length = cpu.Memory.ReadDWord(operands[2].Value.(*DMemOperand).ComputeAddress(cpu))
+				length = cpu.MemoryManager.ReadMemoryDWord(operands[2].Value.(*DMemOperand).ComputeAddress(cpu))
 			case IMem:
-				cpu.LastAccessedAddress = cpu.Memory.ReadDWord(operands[2].Value.(*IMemOperand).ComputeAddress(cpu))
-				length = cpu.Memory.ReadDWord(cpu.Memory.ReadDWord(operands[2].Value.(*IMemOperand).ComputeAddress(cpu)))
+				cpu.LastAccessedAddress = cpu.MemoryManager.ReadMemoryDWord(operands[2].Value.(*IMemOperand).ComputeAddress(cpu))
+				length = cpu.MemoryManager.ReadMemoryDWord(cpu.MemoryManager.ReadMemoryDWord(operands[2].Value.(*IMemOperand).ComputeAddress(cpu)))
 			case Imm:
 				length = operands[2].Value.(*ImmOperand).Value
 			}
@@ -1134,12 +1134,12 @@ var instructionSet = map[uint8]*Instruction{
 				case DMem:
 					cpu.LastAccessedAddress = operands[1].Value.(*DMemOperand).ComputeAddress(cpu)
 					for i, b := range data {
-						cpu.Memory.Write(operands[1].Value.(*DMemOperand).ComputeAddress(cpu)+uint32(i), b)
+						cpu.MemoryManager.WriteMemory(operands[1].Value.(*DMemOperand).ComputeAddress(cpu)+uint32(i), b)
 					}
 				case IMem:
-					cpu.LastAccessedAddress = cpu.Memory.ReadDWord(operands[1].Value.(*IMemOperand).ComputeAddress(cpu))
+					cpu.LastAccessedAddress = cpu.MemoryManager.ReadMemoryDWord(operands[1].Value.(*IMemOperand).ComputeAddress(cpu))
 					for i, b := range data {
-						cpu.Memory.Write(cpu.Memory.ReadDWord(operands[1].Value.(*IMemOperand).ComputeAddress(cpu))+uint32(i), b)
+						cpu.MemoryManager.WriteMemory(cpu.MemoryManager.ReadMemoryDWord(operands[1].Value.(*IMemOperand).ComputeAddress(cpu))+uint32(i), b)
 					}
 				}
 			}
@@ -1161,10 +1161,10 @@ var instructionSet = map[uint8]*Instruction{
 				length = cpu.Registers[operands[2].Value.(*RegOperand).RegNum]
 			case DMem:
 				cpu.LastAccessedAddress = operands[2].Value.(*DMemOperand).ComputeAddress(cpu)
-				length = cpu.Memory.ReadDWord(operands[2].Value.(*DMemOperand).ComputeAddress(cpu))
+				length = cpu.MemoryManager.ReadMemoryDWord(operands[2].Value.(*DMemOperand).ComputeAddress(cpu))
 			case IMem:
-				cpu.LastAccessedAddress = cpu.Memory.ReadDWord(operands[2].Value.(*IMemOperand).ComputeAddress(cpu))
-				length = cpu.Memory.ReadDWord(cpu.Memory.ReadDWord(operands[2].Value.(*IMemOperand).ComputeAddress(cpu)))
+				cpu.LastAccessedAddress = cpu.MemoryManager.ReadMemoryDWord(operands[2].Value.(*IMemOperand).ComputeAddress(cpu))
+				length = cpu.MemoryManager.ReadMemoryDWord(cpu.MemoryManager.ReadMemoryDWord(operands[2].Value.(*IMemOperand).ComputeAddress(cpu)))
 			case Imm:
 				length = operands[2].Value.(*ImmOperand).Value
 			}
@@ -1185,12 +1185,12 @@ var instructionSet = map[uint8]*Instruction{
 			case DMem:
 				cpu.LastAccessedAddress = operands[1].Value.(*DMemOperand).ComputeAddress(cpu)
 				for i := range data {
-					data[i] = cpu.Memory.Read(operands[1].Value.(*DMemOperand).ComputeAddress(cpu) + uint32(i))
+					data[i] = cpu.MemoryManager.ReadMemory(operands[1].Value.(*DMemOperand).ComputeAddress(cpu) + uint32(i))
 				}
 			case IMem:
-				cpu.LastAccessedAddress = cpu.Memory.ReadDWord(operands[1].Value.(*IMemOperand).ComputeAddress(cpu))
+				cpu.LastAccessedAddress = cpu.MemoryManager.ReadMemoryDWord(operands[1].Value.(*IMemOperand).ComputeAddress(cpu))
 				for i := range data {
-					data[i] = cpu.Memory.Read(cpu.Memory.ReadDWord(operands[1].Value.(*IMemOperand).ComputeAddress(cpu)) + uint32(i))
+					data[i] = cpu.MemoryManager.ReadMemory(cpu.MemoryManager.ReadMemoryDWord(operands[1].Value.(*IMemOperand).ComputeAddress(cpu)) + uint32(i))
 				}
 			}
 
