@@ -1,0 +1,3 @@
+.TEXT
+  LD R5 0x69
+  RET

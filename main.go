@@ -36,7 +36,7 @@ func main() {
 	var bc *Bytecode
 	isAsm := false
 	p := NewParser()
-	p.DefaultBaseAddress = 0x80000000
+	p.DefaultBaseAddress = 0x00000000
 	for _, filename := range flag.Args() {
 		if strings.HasSuffix(filename, ".asm") {
 			isAsm = true
@@ -81,7 +81,7 @@ func main() {
 	c.FileSystem = fs
 	c.LoadProgram(bc)
 
-	simulationDelay := 100 // ms per instruction
+	simulationDelay := time.Millisecond * 100
 
 	if err := ui.Init(); err != nil {
 		log.Fatalf("failed to initialize termui: %v", err)
@@ -98,7 +98,7 @@ func main() {
 
 	simInfo := widgets.NewParagraph()
 	simInfo.Title = "Sim Info"
-	simInfo.Text = fmt.Sprintf("Frequency: %d Hz", 1000/simulationDelay)
+	simInfo.Text = fmt.Sprintf("Frequency: %s", DurationToFrequency(simulationDelay))
 	simInfo.SetRect(57, 0, 77, 10)
 
 	memoryWindow := widgets.NewParagraph()
@@ -118,7 +118,7 @@ func main() {
 	run := false
 
 	uiEvents := ui.PollEvents()
-	ticker := time.NewTicker(time.Millisecond * time.Duration(simulationDelay))
+	ticker := time.NewTicker(simulationDelay)
 	for {
 		select {
 		case e := <-uiEvents:
@@ -127,10 +127,10 @@ func main() {
 				return
 			case "+":
 				simulationDelay /= 10
-				ticker.Reset(time.Millisecond * time.Duration(simulationDelay))
+				ticker.Reset(simulationDelay)
 			case "-":
 				simulationDelay *= 10
-				ticker.Reset(time.Millisecond * time.Duration(simulationDelay))
+				ticker.Reset(simulationDelay)
 			case "s":
 				c.Step()
 			case "r":
@@ -148,11 +148,11 @@ func main() {
 			}
 			video.Text = ""
 			for i := 0; i < 37*27; i++ {
-				if c.Memory.Read(0xFFFFF000+uint32(i)) == 0 {
+				if c.MemoryManager.ReadMemory(0xFFFFF000+uint32(i)) == 0 {
 					video.Text += " "
 					continue
 				}
-				video.Text += fmt.Sprintf("%c", c.Memory.Read(0xFFFFF000+uint32(i)))
+				video.Text += fmt.Sprintf("%c", c.MemoryManager.ReadMemory(0xFFFFF000+uint32(i)))
 			}
 
 			regDump.Text = ""
@@ -160,12 +160,12 @@ func main() {
 				regDump.Text += fmt.Sprintf("R%d: %08x\n", i, v)
 			}
 
-			simInfo.Text = fmt.Sprintf("Frequency: %d Hz\nHalted: %t\nRunning: %t\n\nStep: <s>\nRun: <r>\nPause: <p>\nClear: <c>", 1000/simulationDelay, c.Halted, run)
+			simInfo.Text = fmt.Sprintf("Frequency: %s\nHalted: %t\nRunning: %t\n\nStep: <s>\nRun: <r>\nPause: <p>\nClear: <c>", DurationToFrequency(simulationDelay), c.Halted, run)
 
-			memoryWindow.Text = drawMemoryWindow(c.Memory, c.PC)
-			accessWindow.Text = drawAccessWindow(c.Memory, c.LastAccessedAddress)
+			memoryWindow.Text = drawMemoryWindow(c.MemoryManager, c.PC)
+			accessWindow.Text = drawAccessWindow(c.MemoryManager, c.LastAccessedAddress)
 			stackWindow.Text = ""
-			for _, v := range slices.Backward(c.Stack.Stack[:c.Stack.SP]) {
+			for _, v := range slices.Backward(c.MemoryManager.ReadMemoryN(c.MemoryManager.VirtualStackPtr, int(c.MemoryManager.VirtualStackEnd-c.MemoryManager.VirtualStackPtr))) {
 				stackWindow.Text += fmt.Sprintf("%04x\n", v)
 			}
 			ui.Render(video, regDump, simInfo, memoryWindow, accessWindow, stackWindow)
@@ -173,7 +173,18 @@ func main() {
 	}
 }
 
-func drawMemoryWindow(mem *Memory, programCounter uint32) string {
+func DurationToFrequency(d time.Duration) string {
+	if d <= time.Nanosecond {
+		return fmt.Sprintf("%d GHz", time.Nanosecond/d)
+	} else if d <= time.Microsecond {
+		return fmt.Sprintf("%d MHz", time.Microsecond/d)
+	} else if d <= time.Millisecond {
+		return fmt.Sprintf("%d KHz", time.Millisecond/d)
+	}
+	return fmt.Sprintf("%d Hz", time.Second/d)
+}
+
+func drawMemoryWindow(mem *MemoryManager, programCounter uint32) string {
 	linesBefore := 7
 	linesAfter := 7
 
@@ -192,17 +203,17 @@ func drawMemoryWindow(mem *Memory, programCounter uint32) string {
 			memoryWindow += fmt.Sprintf(" %08x: ??\n", i)
 			continue
 		}
-		if i == programCounter && instructionSet[mem.Read(i)] != nil {
-			memoryWindow += fmt.Sprintf(">%08x: %02x %s\n", i, mem.Read(i), instructionSet[mem.Read(i)].Name)
+		if i == programCounter && instructionSet[mem.ReadMemory(i)] != nil {
+			memoryWindow += fmt.Sprintf(">%08x: %02x %s\n", i, mem.ReadMemory(i), instructionSet[mem.ReadMemory(i)].Name)
 		} else {
-			memoryWindow += fmt.Sprintf(" %08x: %02x\n", i, mem.Read(i))
+			memoryWindow += fmt.Sprintf(" %08x: %02x\n", i, mem.ReadMemory(i))
 		}
 	}
 
 	return memoryWindow
 }
 
-func drawAccessWindow(mem *Memory, lastAccess uint32) string {
+func drawAccessWindow(mem *MemoryManager, lastAccess uint32) string {
 	linesBefore := 7
 	linesAfter := 7
 
@@ -222,9 +233,9 @@ func drawAccessWindow(mem *Memory, lastAccess uint32) string {
 			continue
 		}
 		if i == lastAccess {
-			memoryWindow += fmt.Sprintf(">%08x: %02x\n", i, mem.Read(i))
+			memoryWindow += fmt.Sprintf(">%08x: %02x\n", i, mem.ReadMemory(i))
 		} else {
-			memoryWindow += fmt.Sprintf(" %08x: %02x\n", i, mem.Read(i))
+			memoryWindow += fmt.Sprintf(" %08x: %02x\n", i, mem.ReadMemory(i))
 		}
 	}
 
