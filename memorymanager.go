@@ -20,6 +20,12 @@ const (
 type ProgramInfo struct {
 	StartAddress uint32
 	Size         uint32
+	Sectors      []ProgramInfoSector
+}
+
+type ProgramInfoSector struct {
+	StartAddress uint32
+	Bytecode     []byte
 }
 
 type MemoryManager struct {
@@ -80,7 +86,7 @@ func (mm *MemoryManager) MapVirtualToPhysical(virtualAddr uint32) error {
 }
 
 func (mm *MemoryManager) TranslateAddress(virtualAddr uint32) (uint32, error) {
-	if virtualAddr >= ROMStart  || virtualAddr <= ROMEnd {
+	if virtualAddr >= ROMStart || virtualAddr <= ROMEnd {
 		return virtualAddr, nil
 	} else if virtualAddr >= VRAMStart || virtualAddr <= VRAMEnd {
 		return virtualAddr, nil
@@ -356,39 +362,71 @@ func (mm *MemoryManager) UnmapPage(addr uint32) {
 	}
 }
 
-func (mm *MemoryManager) ExecuteJump(currentPC uint32, jumpAddr uint32) (uint32, error) {
+func (mm *MemoryManager) ExecuteJump(currentPC uint32, jumpAddr uint32) uint32 {
 	for _, info := range mm.Programs {
 		if currentPC >= info.StartAddress && currentPC < info.StartAddress+info.Size {
 			translatedAddr, err := mm.TranslateAddress(info.StartAddress + jumpAddr)
 			if err != nil {
-				return 0, err
+				panic(err)
 			}
 			if translatedAddr == 0xFFFFFFFF {
-				return 0, errors.New("invalid jump address")
+				panic("invalid jump address")
 			}
-			return translatedAddr, nil
+			return translatedAddr
 		}
 	}
-	return 0, errors.New("current PC not within any known program")
+	return jumpAddr
 }
 
-func (mm *MemoryManager) LoadProgram(program []byte) (uint32, error) {
-	programSize := uint32(len(program))
-	addr, err := mm.Malloc(programSize)
-	if err != nil {
-		return 0, err
+func (mm *MemoryManager) NewProgram() *ProgramInfo {
+	program := &ProgramInfo{
+		Sectors: []ProgramInfoSector{},
+	}
+	mm.Programs = append(mm.Programs, program)
+	return program
+}
+
+func (mm *MemoryManager) AddSector(programInfo *ProgramInfo, baseAddress uint32, program []byte) {
+	sector := ProgramInfoSector{
+		StartAddress: baseAddress,
+		Bytecode:     program,
+	}
+	programInfo.Sectors = append(programInfo.Sectors, sector)
+}
+
+func (mm *MemoryManager) LoadProgram(programInfo *ProgramInfo) uint32 {
+	var totalSize uint32
+	for _, sector := range programInfo.Sectors {
+		totalSize += uint32(len(sector.Bytecode))
 	}
 
-	err = mm.WriteNMemory(addr, program)
+	startAddr, err := mm.Malloc(totalSize)
 	if err != nil {
+		panic(err)
+	}
+
+	programInfo.StartAddress = startAddr
+
+	for _, sector := range programInfo.Sectors {
+		mm.WriteNMemory(startAddr, sector.Bytecode)
+		programInfo.Size += uint32(len(sector.Bytecode))
+		startAddr += uint32(len(sector.Bytecode))
+	}
+
+	return programInfo.StartAddress
+}
+
+func (mm *MemoryManager) UnloadProgram(startAddr uint32) error {
+	programInfo := mm.Programs[startAddr]
+	if programInfo == nil {
+		return errors.New("program not found")
+	}
+
+	for addr := startAddr; addr < startAddr+programInfo.Size; addr += PageSize {
 		mm.Free(addr)
-		return 0, err
 	}
 
-	mm.Programs[addr] = &ProgramInfo{
-		StartAddress: addr,
-		Size:         programSize,
-	}
+	mm.Programs[startAddr] = nil
 
-	return addr, nil
+	return nil
 }
