@@ -1,11 +1,5 @@
 package main
 
-type MemoryType interface {
-	Read(addr uint32) uint8
-	Write(addr uint32, data uint8)
-	Clear()
-}
-
 type Memory struct {
 	RAM  *RAM
 	ROM  *ROM
