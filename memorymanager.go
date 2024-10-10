@@ -127,6 +127,19 @@ func (mm *MemoryManager) ReadMemoryDWord(addr uint32) uint32 {
 	return binary.LittleEndian.Uint32(data)
 }
 
+func (mm *MemoryManager) ReadMemoryString(addr uint32) string {
+	var str []byte
+	for {
+		ch := mm.ReadMemory(addr)
+		if ch == 0 {
+			break
+		}
+		str = append(str, ch)
+		addr++
+	}
+	return string(str)
+}
+
 func (mm *MemoryManager) ReadMemoryN(addr uint32, n int) []byte {
 	data, err := mm.ReadNMemory(addr, n)
 	if err != nil {
