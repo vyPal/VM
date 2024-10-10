@@ -86,10 +86,10 @@ func (p *Parser) AddFile(filename string) {
 }
 
 func (p *Parser) UpdateDefaultBaseAddress() {
-	var lastRomEnd uint32 = 0x80000000 // Start of ROM
+	var lastRomEnd uint32 = 0x00000000
 
 	for _, sector := range p.Sectors {
-		if sector.BaseAddress >= 0x80000000 {
+		if sector.BaseAddress >= 0x00000000 {
 			sectorEnd := sector.BaseAddress + uint32(len(sector.Program))
 			if sectorEnd > lastRomEnd {
 				lastRomEnd = sectorEnd
