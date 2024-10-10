@@ -65,13 +65,13 @@ func (p *Parser) AddFile(filename string) {
 		panic(err)
 	}
 
-	sectorsToEncode := []*Sector{}
+	sectorsToEncode := []*Sector{p.CurrentSector}
 	lastSector := p.CurrentSector
 	for _, line := range strings.Split(string(contents), "\n") {
 		p.ParseLine(line)
 		if p.CurrentSector != lastSector {
-			sectorsToEncode = append(sectorsToEncode, lastSector)
 			lastSector = p.CurrentSector
+			sectorsToEncode = append(sectorsToEncode, lastSector)
 		}
 	}
 
