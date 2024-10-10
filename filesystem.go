@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"os"
 	"path/filepath"
 )
@@ -17,6 +18,7 @@ type VFS interface {
 	ReadAt(interface{}, []byte, int64) (int, error)
 	WriteAt(interface{}, []byte, int64) (int, error)
 	Seek(interface{}, int64, int) (int64, error)
+	LoadBinary(interface{}, *MemoryManager) uint32
 }
 
 type FileInfo struct {
@@ -126,4 +128,31 @@ func (vfs *FolderBasedVFS) WriteAt(file interface{}, b []byte, off int64) (int, 
 
 func (vfs *FolderBasedVFS) Seek(file interface{}, off int64, whence int) (int64, error) {
 	return file.(*FolderBasedFile).Seek(off, whence)
+}
+
+func (vfs *FolderBasedVFS) LoadBinary(file interface{}, mm *MemoryManager) uint32 {
+	f := file.(*FolderBasedFile)
+	l, err := f.File.Seek(0, io.SeekEnd)
+	if err != nil {
+		panic(err)
+	}
+	f.File.Seek(0, io.SeekStart)
+	data := make([]byte, l)
+	_, err = f.File.Read(data)
+	if err != nil {
+		panic(err)
+	}
+
+	bc, err := DecodeBytecode(data)
+	if err != nil {
+		panic(err)
+	}
+
+	for _, sector := range bc.Sectors {
+		if sector.Bytecode != nil {
+			mm.Memory.LoadProgram(sector.StartAddress, sector.Bytecode)
+		}
+	}
+
+	return bc.StartAddress
 }

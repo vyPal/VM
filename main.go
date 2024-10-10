@@ -165,7 +165,7 @@ func main() {
 			memoryWindow.Text = drawMemoryWindow(c.MemoryManager, c.PC)
 			accessWindow.Text = drawAccessWindow(c.MemoryManager, c.LastAccessedAddress)
 			stackWindow.Text = ""
-			for _, v := range slices.Backward(c.MemoryManager.ReadMemoryN(c.MemoryManager.VirtualStackPtr, int(c.MemoryManager.VirtualStackEnd - c.MemoryManager.VirtualStackPtr))) {
+			for _, v := range slices.Backward(c.MemoryManager.ReadMemoryN(c.MemoryManager.VirtualStackPtr, int(c.MemoryManager.VirtualStackEnd-c.MemoryManager.VirtualStackPtr))) {
 				stackWindow.Text += fmt.Sprintf("%04x\n", v)
 			}
 			ui.Render(video, regDump, simInfo, memoryWindow, accessWindow, stackWindow)

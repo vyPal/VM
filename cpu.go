@@ -1,7 +1,7 @@
 package main
 
 type CPU struct {
-	MemoryManager 		 *MemoryManager
+	MemoryManager       *MemoryManager
 	Registers           [16]uint32
 	PC                  uint32
 	Halted              bool
@@ -13,12 +13,12 @@ type CPU struct {
 
 func NewCPU() *CPU {
 	return &CPU{
-		MemoryManager:    NewMemoryManager(NewMemory()),
-		Registers: [16]uint32{},
-		PC:        0,
-		Halted:    false,
-		FileTable: make(map[uint32]interface{}),
-		NextFD:    0,
+		MemoryManager: NewMemoryManager(NewMemory()),
+		Registers:     [16]uint32{},
+		PC:            0,
+		Halted:        false,
+		FileTable:     make(map[uint32]interface{}),
+		NextFD:        0,
 	}
 }
 
