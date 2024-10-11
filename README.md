@@ -12,12 +12,23 @@ To run a program, simply pass the path to the binary or assembly file as an argu
 ./VM test.bin
 ```
 
+### VFS (Virtual File System)
+The VM has support for a virtual file system. The VFS can be used to read and write files from the host system.
+
+There is currently only one driver available, the `folder` driver. This driver allows the VM to read and write files from a folder on the host system.
+
+The VFS is enabled by default and will create a folder named `vmdata` in the current working directory. This folder will be used as the root directory for the VFS.
+You can change the root directory by using the `-root` flag.
+```bash
+./VM -root /path/to/folder test.bin
+```
+
 ### Generating Bytecode
 Internally, the VM uses a custom bytecode format. When an assembly file is passed as an argument, the VM will automatically assemble it into bytecode.
 
-To assemble a file and save the bytecode to a file, use the `-bytecode` flag. If you want to change the name of the output file, use the `-o` flag.
+To assemble a file and save the bytecode to a file, use the `-bytecode` flag. If you want to change the name of the output file, use the `-output` flag.
 ```bash
-./VM -bytecode test.asm
+./VM -bytecode -output test.bin test.asm
 ```
 
 ## Assembly
@@ -55,6 +66,14 @@ The VM uses a custom assembly language. The following instructions are supported
 - `PUSH <r/im/dm/i>` - Push a value onto the stack
 - `POP <r/im/dm>` - Pop a value from the stack
 - `HLT` - Halt the program
+- `INC <r>` - Increment a value
+- `DEC <r>` - Decrement a value
+- `OPEN <r> <dm/im>` - Open a file and store the file descriptor in a register
+- `READ <r> <r/im/dm> <r/im/dm/i>` - Read from a file
+- `WRITE <r> <r/im/dm> <r/im/dm/i>` - Write to a file
+- `SEEK <r> <r/im/dm> <i>` - Seek to a position in a file
+- `LOADBIN <r> <r>` - Load a binary file into memory
+- `CLOSE <r>` - Close a file
 
 </details>
 
@@ -79,14 +98,15 @@ Operands can be registers, immediate values, direct memory addresses, or indirec
 Registers can be accessed as 8, 16, or 32 bits.
 ```asm
 R0 ; 32-bit register
-R0B ; 8-bit register
 R0W ; 16-bit register
+R0B ; 8-bit register
 ```
 #### Immediate Values
 Immediate values are constants that are directly encoded into the instruction.
 ```asm
 0x1234 ; 32-bit immediate value
 0x12 ; 8-bit immediate value
+labelname ; Label address (calculated at assembly time)
 ```
 
 #### Direct Memory Addresses
@@ -116,8 +136,19 @@ Label addresses are calculated at assembly time and are not stored in the byteco
     LD R0 [<label>] ; Load the address of a label into a register
 ```
 
+There is also a special label called `_start` that can be used to indicate the starting point of the program. There can only be one `_start` label in the program.
+```asm
+.TEXT
+_start:
+    ; Program code
+```
+
 ### Stack
-The VM currently only has a fixed-size stack of 16384 values. The stack is used for function calls and temporary storage.
+The Stack is not directly accessible, but can be used with the `PUSH` and `POP` instructions. The stack grows downwards from the top of the RAM.
+```asm
+PUSH R0 ; Push the value of a register onto the Stack
+POP R0 ; Pop a value from the Stack into a register
+```
 
 ### Sections
 The assembly file supports 2 types of sections:
@@ -146,7 +177,7 @@ The possible values for size are:
 ### Sectors
 The assembly language allows the user to split the code into "sectors" by defining starting postitions for the `DATA` and `TEXT` sections. This is useful for creating libraries or splitting the code into multiple files.
 
-This can also be used to load the program at a specific address in memory, including the RAM, and executing from there.
+This can also be used to load the program at a specific address in memory, including the RAM, and executing from there, however this is not recommended.
 ```asm
 ORG 0x00000000 ; Any data or instructions after this will be loaded at this address
 ```
