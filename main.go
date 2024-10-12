@@ -46,6 +46,9 @@ func main() {
 			if isAsm {
 				log.Fatalf("cannot mix .asm and .bin files")
 			}
+			if bc != nil {
+				log.Fatalf("cannot load multiple .bin files")
+			}
 			fileContent, err := os.ReadFile(filename)
 			if err != nil {
 				log.Fatalf("failed to read file: %v", err)
