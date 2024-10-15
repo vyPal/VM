@@ -18,6 +18,7 @@ func main() {
 	outputFilename := flag.String("output", "output.bin", "Output filename")
 	fsType := flag.String("fs", "folder", "Filesystem type")
 	fsRoot := flag.String("root", "./vmdata", "Root folder")
+	callTable := flag.Bool("calltable", false, "Generate call table")
 	flag.Parse()
 
 	var fs VFS
@@ -66,6 +67,18 @@ func main() {
 			log.Fatalf("overlapping sectors: %v", err)
 		}
 		bc = ProgramToBytecode(p)
+
+		if *callTable {
+			for k, v := range p.Labels {
+				fmt.Printf("%s: %08x\n", k, v)
+			}
+			return
+		}
+	}
+
+	if *callTable {
+		log.Fatalln("Only able to generate call table from .asm files")
+		return
 	}
 
 	if *generateBytecode {
