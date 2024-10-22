@@ -257,7 +257,7 @@ func (mm *MemoryManager) Malloc(size uint32) (uint32, error) {
 	for addr := startAddr; addr < endAddr; addr += PageSize {
 		if err := mm.MapVirtualToPhysical(addr); err != nil {
 			for freeAddr := startAddr; freeAddr < addr; freeAddr += PageSize {
-				mm.Free(freeAddr)
+				mm.Free(freeAddr, PageSize)
 			}
 			return 0, err
 		}
@@ -267,17 +267,16 @@ func (mm *MemoryManager) Malloc(size uint32) (uint32, error) {
 	return startAddr, nil
 }
 
-func (mm *MemoryManager) Free(addr uint32) {
-	pageNum := addr / PageSize
-	if physicalPageIndex, exists := mm.PageTable[pageNum]; exists {
-		delete(mm.PageTable, pageNum)
-		mm.FreeFrame(physicalPageIndex)
-	}
+func (mm *MemoryManager) Free(addr uint32, size uint32) {
+	alignedSize := (size + 3) & ^uint32(3)
+	startAddr := addr
+	endAddr := startAddr + alignedSize
 
-	if addr == mm.VirtualHeapPtr-PageSize {
-		for mm.VirtualHeapPtr > mm.VirtualHeapStart &&
-			mm.PageTable[mm.VirtualHeapPtr/PageSize-1] == 0 {
-			mm.VirtualHeapPtr -= PageSize
+	for freeAddr := startAddr; freeAddr < endAddr; freeAddr += PageSize {
+		pageNum := freeAddr / PageSize
+		if physicalPageIndex, exists := mm.PageTable[pageNum]; exists {
+			delete(mm.PageTable, pageNum)
+			mm.FreeFrame(physicalPageIndex)
 		}
 	}
 
@@ -422,9 +421,7 @@ func (mm *MemoryManager) UnloadProgram(startAddr uint32) error {
 		return errors.New("program not found")
 	}
 
-	for addr := startAddr; addr < startAddr+programInfo.Size; addr += PageSize {
-		mm.Free(addr)
-	}
+	mm.Free(programInfo.StartAddress, programInfo.Size)
 
 	mm.Programs[startAddr] = nil
 

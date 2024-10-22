@@ -1263,6 +1263,67 @@ var instructionSet = map[uint8]*Instruction{
 			{Type: Reg}, // A - FD
 		},
 	},
+	0x23: {
+		Opcode: 0x23,
+		Name:   "MALLOC",
+		Execute: func(cpu *CPU, operands []Operand) {
+			var size uint32
+			switch operands[0].Type {
+			case Reg:
+				size = cpu.Registers[operands[0].Value.(*RegOperand).RegNum]
+			case DMem:
+				cpu.LastAccessedAddress = operands[0].Value.(*DMemOperand).ComputeAddress(cpu)
+				size = cpu.MemoryManager.ReadMemoryDWord(operands[0].Value.(*DMemOperand).ComputeAddress(cpu))
+			case IMem:
+				cpu.LastAccessedAddress = cpu.MemoryManager.ReadMemoryDWord(operands[0].Value.(*IMemOperand).ComputeAddress(cpu))
+				size = cpu.MemoryManager.ReadMemoryDWord(cpu.MemoryManager.ReadMemoryDWord(operands[0].Value.(*IMemOperand).ComputeAddress(cpu)))
+			case Imm:
+				size = operands[0].Value.(*ImmOperand).Value
+			}
+			addr, err := cpu.MemoryManager.Malloc(size)
+			if err != nil {
+				cpu.Registers[operands[1].Value.(*RegOperand).RegNum] = 0xFFFFFFFF
+			}
+			cpu.Registers[operands[1].Value.(*RegOperand).RegNum] = addr
+		},
+		Operands: []Operand{
+			{AllowedTypes: []OperandType{Reg, DMem, IMem, Imm}}, // A - Size
+			{Type: Reg}, // B - Dest
+		},
+	},
+	0x24: {
+		Opcode: 0x24,
+		Name:   "FREE",
+		Execute: func(cpu *CPU, operands []Operand) {
+			var size uint32
+			switch operands[1].Type {
+			case Reg:
+				size = cpu.Registers[operands[1].Value.(*RegOperand).RegNum]
+			case DMem:
+				cpu.LastAccessedAddress = operands[1].Value.(*DMemOperand).ComputeAddress(cpu)
+				size = cpu.MemoryManager.ReadMemoryDWord(operands[1].Value.(*DMemOperand).ComputeAddress(cpu))
+			case IMem:
+				cpu.LastAccessedAddress = cpu.MemoryManager.ReadMemoryDWord(operands[1].Value.(*IMemOperand).ComputeAddress(cpu))
+				size = cpu.MemoryManager.ReadMemoryDWord(cpu.MemoryManager.ReadMemoryDWord(operands[1].Value.(*IMemOperand).ComputeAddress(cpu)))
+			case Imm:
+				size = operands[1].Value.(*ImmOperand).Value
+			}
+			switch operands[0].Type {
+			case Reg:
+				cpu.MemoryManager.Free(cpu.Registers[operands[0].Value.(*RegOperand).RegNum], size)
+			case DMem:
+				cpu.LastAccessedAddress = operands[0].Value.(*DMemOperand).ComputeAddress(cpu)
+				cpu.MemoryManager.Free(cpu.MemoryManager.ReadMemoryDWord(operands[0].Value.(*DMemOperand).ComputeAddress(cpu)), size)
+			case IMem:
+				cpu.LastAccessedAddress = cpu.MemoryManager.ReadMemoryDWord(operands[0].Value.(*IMemOperand).ComputeAddress(cpu))
+				cpu.MemoryManager.Free(cpu.MemoryManager.ReadMemoryDWord(cpu.MemoryManager.ReadMemoryDWord(operands[0].Value.(*IMemOperand).ComputeAddress(cpu))), size)
+			}
+		},
+		Operands: []Operand{
+			{AllowedTypes: []OperandType{Reg, DMem, IMem}}, // A - Start Address
+			{AllowedTypes: []OperandType{Reg, DMem, IMem, Imm}}, // B - Size
+		},
+	},
 }
 
 func EncodeInstruction(inst *Instruction) []byte {
