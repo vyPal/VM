@@ -1,11 +1,11 @@
 package main
 
 import (
+	"encoding/binary"
 	"flag"
 	"fmt"
 	"log"
 	"os"
-	"slices"
 	"strings"
 	"time"
 
@@ -114,22 +114,25 @@ func main() {
 
 	simInfo := widgets.NewParagraph()
 	simInfo.Title = "Sim Info"
-	simInfo.Text = fmt.Sprintf("Frequency: %s", DurationToFrequency(simulationDelay))
-	simInfo.SetRect(72, 0, 97, 10)
+	simInfo.SetRect(72, 0, 91, 10)
 
 	memoryWindow := widgets.NewParagraph()
 	memoryWindow.Title = "Program"
-	memoryWindow.SetRect(42, 10, 81, 27)
+	memoryWindow.SetRect(42, 10, 74, 27)
 
 	accessWindow := widgets.NewParagraph()
 	accessWindow.Title = "Access"
-	accessWindow.SetRect(81, 10, 97, 27)
+	accessWindow.SetRect(74, 10, 91, 27)
 
 	stackWindow := widgets.NewParagraph()
 	stackWindow.Title = "Stack"
-	stackWindow.SetRect(97, 0, 115, 27)
+	stackWindow.SetRect(91, 0, 101, 27)
 
-	ui.Render(video, regDump, simInfo, memoryWindow, accessWindow, stackWindow)
+	heapWindow := widgets.NewParagraph()
+	heapWindow.Title = "Heap"
+	heapWindow.SetRect(101, 0, 111, 27)
+
+	ui.Render(video, regDump, simInfo, memoryWindow, accessWindow, stackWindow, heapWindow)
 
 	run := false
 
@@ -181,10 +184,23 @@ func main() {
 			memoryWindow.Text = drawMemoryWindow(c.MemoryManager, c.PC)
 			accessWindow.Text = drawAccessWindow(c.MemoryManager, c.LastAccessedAddress)
 			stackWindow.Text = ""
-			for _, v := range slices.Backward(c.MemoryManager.ReadMemoryN(c.MemoryManager.VirtualStackPtr, int(c.MemoryManager.VirtualStackEnd-c.MemoryManager.VirtualStackPtr))) {
-				stackWindow.Text += fmt.Sprintf("%04x\n", v)
+			stackMemory := c.MemoryManager.ReadMemoryN(c.MemoryManager.VirtualStackPtr, int(c.MemoryManager.VirtualStackEnd-c.MemoryManager.VirtualStackPtr))
+			for i := 0; i < len(stackMemory); i += 4 {
+				if i+4 <= len(stackMemory) {
+					v := binary.LittleEndian.Uint32(stackMemory[i : i+4])
+					stackWindow.Text += fmt.Sprintf("%08x\n", v)
+				}
 			}
-			ui.Render(video, regDump, simInfo, memoryWindow, accessWindow, stackWindow)
+
+			heapWindow.Text = ""
+			heapMemory := c.MemoryManager.ReadMemoryN(c.MemoryManager.VirtualHeapStart, int(c.MemoryManager.VirtualHeapPtr))
+			for i := 0; i < len(heapMemory); i += 4 {
+				if i+4 <= len(heapMemory) {
+					v := binary.LittleEndian.Uint32(heapMemory[i : i+4])
+					heapWindow.Text += fmt.Sprintf("%08x\n", v)
+				}
+			}
+			ui.Render(video, regDump, simInfo, memoryWindow, accessWindow, stackWindow, heapWindow)
 		}
 	}
 }
