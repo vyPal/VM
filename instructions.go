@@ -1320,7 +1320,7 @@ var instructionSet = map[uint8]*Instruction{
 			}
 		},
 		Operands: []Operand{
-			{AllowedTypes: []OperandType{Reg, DMem, IMem}}, // A - Start Address
+			{AllowedTypes: []OperandType{Reg, DMem, IMem}},      // A - Start Address
 			{AllowedTypes: []OperandType{Reg, DMem, IMem, Imm}}, // B - Size
 		},
 	},

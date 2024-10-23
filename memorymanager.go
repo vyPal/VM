@@ -26,7 +26,7 @@ type ProgramInfo struct {
 type ProgramInfoSector struct {
 	StartAddress uint32
 	Bytecode     []byte
-	IsStart			bool
+	IsStart      bool
 }
 
 type MemoryManager struct {
@@ -249,22 +249,12 @@ func (mm *MemoryManager) Malloc(size uint32) (uint32, error) {
 	startAddr := mm.VirtualHeapPtr
 	endAddr := startAddr + alignedSize
 
-	for endAddr > mm.VirtualStackPtr {
+	for endAddr > mm.VirtualHeapPtr {
 		if err := mm.GrowHeap(); err != nil {
 			return 0, err
 		}
 	}
 
-	for addr := startAddr; addr < endAddr; addr += PageSize {
-		if err := mm.MapVirtualToPhysical(addr); err != nil {
-			for freeAddr := startAddr; freeAddr < addr; freeAddr += PageSize {
-				mm.Free(freeAddr, PageSize)
-			}
-			return 0, err
-		}
-	}
-
-	mm.VirtualHeapPtr = endAddr
 	return startAddr, nil
 }
 
@@ -276,6 +266,7 @@ func (mm *MemoryManager) Free(addr uint32, size uint32) {
 	for freeAddr := startAddr; freeAddr < endAddr; freeAddr += PageSize {
 		pageNum := freeAddr / PageSize
 		if physicalPageIndex, exists := mm.PageTable[pageNum]; exists {
+			mm.WriteNMemory(freeAddr, make([]byte, PageSize))
 			delete(mm.PageTable, pageNum)
 			mm.FreeFrame(physicalPageIndex)
 		}
@@ -390,7 +381,7 @@ func (mm *MemoryManager) AddSector(programInfo *ProgramInfo, baseAddress uint32,
 	sector := ProgramInfoSector{
 		StartAddress: baseAddress,
 		Bytecode:     program,
-		IsStart:	  isStart,
+		IsStart:      isStart,
 	}
 	programInfo.Sectors = append(programInfo.Sectors, sector)
 }

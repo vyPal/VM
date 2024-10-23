@@ -52,7 +52,7 @@ func (f *FolderBasedFile) ReadAt(b []byte, off int64) (int, error) {
 	return f.File.ReadAt(b, off)
 }
 
-func(f *FolderBasedFile) WriteAt(b []byte, off int64) (int, error) {
+func (f *FolderBasedFile) WriteAt(b []byte, off int64) (int, error) {
 	return f.File.WriteAt(b, off)
 }
 
