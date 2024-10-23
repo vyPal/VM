@@ -110,24 +110,24 @@ func main() {
 
 	regDump := widgets.NewParagraph()
 	regDump.Title = "Reg"
-	regDump.SetRect(42, 0, 57, 10)
+	regDump.SetRect(42, 0, 72, 10)
 
 	simInfo := widgets.NewParagraph()
 	simInfo.Title = "Sim Info"
 	simInfo.Text = fmt.Sprintf("Frequency: %s", DurationToFrequency(simulationDelay))
-	simInfo.SetRect(57, 0, 77, 10)
+	simInfo.SetRect(72, 0, 97, 10)
 
 	memoryWindow := widgets.NewParagraph()
 	memoryWindow.Title = "Program"
-	memoryWindow.SetRect(42, 10, 61, 27)
+	memoryWindow.SetRect(42, 10, 81, 27)
 
 	accessWindow := widgets.NewParagraph()
 	accessWindow.Title = "Access"
-	accessWindow.SetRect(61, 10, 77, 27)
+	accessWindow.SetRect(81, 10, 97, 27)
 
 	stackWindow := widgets.NewParagraph()
 	stackWindow.Title = "Stack"
-	stackWindow.SetRect(77, 0, 95, 27)
+	stackWindow.SetRect(97, 0, 115, 27)
 
 	ui.Render(video, regDump, simInfo, memoryWindow, accessWindow, stackWindow)
 
@@ -172,11 +172,11 @@ func main() {
 			}
 
 			regDump.Text = ""
-			for i, v := range c.Registers {
-				regDump.Text += fmt.Sprintf("R%d: %08x\n", i, v)
+			for i, v := range c.Registers[:8] {
+				regDump.Text += fmt.Sprintf("R%d: %08x | R%d: %08x\n", i, v, i+8, c.Registers[i+8])
 			}
 
-			simInfo.Text = fmt.Sprintf("Frequency: %s\nHalted: %t\nRunning: %t\n\nStep: <s>\nRun: <r>\nPause: <p>\nClear: <c>", DurationToFrequency(simulationDelay), c.Halted, run)
+			simInfo.Text = fmt.Sprintf("Frequency: %s\nHalted: %t\nRunning: %t\n\nPC: %08x\nSP: %08x\nHP: %08x", DurationToFrequency(simulationDelay), c.Halted, run, c.PC, c.MemoryManager.VirtualStackPtr, c.MemoryManager.VirtualHeapPtr)
 
 			memoryWindow.Text = drawMemoryWindow(c.MemoryManager, c.PC)
 			accessWindow.Text = drawAccessWindow(c.MemoryManager, c.LastAccessedAddress)

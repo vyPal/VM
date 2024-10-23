@@ -26,6 +26,7 @@ type ProgramInfo struct {
 type ProgramInfoSector struct {
 	StartAddress uint32
 	Bytecode     []byte
+	IsStart			bool
 }
 
 type MemoryManager struct {
@@ -385,10 +386,11 @@ func (mm *MemoryManager) NewProgram() *ProgramInfo {
 	return program
 }
 
-func (mm *MemoryManager) AddSector(programInfo *ProgramInfo, baseAddress uint32, program []byte) {
+func (mm *MemoryManager) AddSector(programInfo *ProgramInfo, baseAddress uint32, program []byte, isStart bool) {
 	sector := ProgramInfoSector{
 		StartAddress: baseAddress,
 		Bytecode:     program,
+		IsStart:	  isStart,
 	}
 	programInfo.Sectors = append(programInfo.Sectors, sector)
 }
@@ -407,6 +409,9 @@ func (mm *MemoryManager) LoadProgram(programInfo *ProgramInfo) uint32 {
 	programInfo.StartAddress = startAddr
 
 	for _, sector := range programInfo.Sectors {
+		if sector.IsStart {
+			programInfo.StartAddress = startAddr
+		}
 		mm.WriteNMemory(startAddr, sector.Bytecode)
 		programInfo.Size += uint32(len(sector.Bytecode))
 		startAddr += uint32(len(sector.Bytecode))
