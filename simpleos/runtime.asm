@@ -1,3 +1,4 @@
 .TEXT
   LD R5 0x69
+  INT 0x0
   RET

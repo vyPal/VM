@@ -1,8 +1,11 @@
 package main
 
+import "fmt"
+
 type Memory struct {
 	RAM  *RAM
 	ROM  *ROM
+	IVT  *IVT
 	VRAM *VRAM
 }
 
@@ -10,6 +13,7 @@ func NewMemory() *Memory {
 	return &Memory{
 		RAM:  NewRAM(),
 		ROM:  NewROM(),
+		IVT:  NewIVT(),
 		VRAM: NewVRAM(),
 	}
 }
@@ -39,6 +43,8 @@ func (m *Memory) CanRead(addr uint32) bool {
 		return true
 	case addr < 0x88000000:
 		return true
+	case addr < 0x88000400:
+		return true
 	case addr >= 0xFFFFF000:
 		return true
 	default:
@@ -52,10 +58,12 @@ func (m *Memory) Read(addr uint32) uint8 {
 		return m.RAM.Read(addr)
 	case addr < 0x88000000:
 		return m.ROM.Read(addr - 0x80000000)
+	case addr < 0x88000400:
+		return m.IVT.Read(addr - 0x88000000)
 	case addr >= 0xFFFFF000:
 		return m.VRAM.Read(addr - 0xFFFFF000)
 	default:
-		panic("Addressing unuseable memory")
+		panic("Addressing unuseable memory: " + fmt.Sprintf("%x", addr))
 	}
 }
 
@@ -65,6 +73,8 @@ func (m *Memory) ReadWord(addr uint32) uint16 {
 		return m.RAM.ReadWord(addr)
 	case addr < 0x88000000:
 		return m.ROM.ReadWord(addr - 0x80000000)
+	case addr < 0x88000400:
+		return m.IVT.ReadWord(addr - 0x88000000)
 	case addr >= 0xFFFFF000:
 		panic("VRAM ReadWord")
 	default:
@@ -78,6 +88,8 @@ func (m *Memory) ReadDWord(addr uint32) uint32 {
 		return m.RAM.ReadDWord(addr)
 	case addr < 0x88000000:
 		return m.ROM.ReadDWord(addr - 0x80000000)
+	case addr < 0x88000400:
+		return m.IVT.ReadDWord(addr - 0x88000000)
 	case addr >= 0xFFFFF000:
 		panic("VRAM ReadDWord")
 	default:
@@ -112,6 +124,8 @@ func (m *Memory) Write(addr uint32, data uint8) {
 		m.RAM.Write(addr, data)
 	case addr < 0x88000000:
 		panic("ROM Write")
+	case addr < 0x88000400:
+		m.IVT.Write(addr-0x88000000, data)
 	case addr >= 0xFFFFF000:
 		m.VRAM.Write(addr-0xFFFFF000, data)
 	default:
@@ -125,6 +139,8 @@ func (m *Memory) WriteWord(addr uint32, data uint16) {
 		m.RAM.WriteWord(addr, data)
 	case addr < 0x88000000:
 		panic("ROM WriteWord")
+	case addr < 0x88000400:
+		m.IVT.WriteWord(addr-0x88000000, data)
 	case addr >= 0xFFFFF000:
 		panic("VRAM WriteWord")
 	default:
@@ -138,6 +154,8 @@ func (m *Memory) WriteDWord(addr uint32, data uint32) {
 		m.RAM.WriteDWord(addr, data)
 	case addr < 0x88000000:
 		panic("ROM WriteDWord")
+	case addr < 0x88000400:
+		m.IVT.WriteDWord(addr-0x88000000, data)
 	case addr >= 0xFFFFF000:
 		panic("VRAM WriteDWord")
 	default:
@@ -148,6 +166,7 @@ func (m *Memory) WriteDWord(addr uint32, data uint32) {
 func (m *Memory) Clear() {
 	m.RAM.Clear()
 	m.ROM.Clear()
+	m.IVT.Clear()
 	m.VRAM.Clear()
 }
 
@@ -191,6 +210,48 @@ func (r *RAM) Clear() {
 
 func NewRAM() *RAM {
 	return &RAM{}
+}
+
+type IVT struct {
+	mem [0x400]uint8
+}
+
+func (r *IVT) Read(addr uint32) uint8 {
+	return r.mem[addr]
+}
+
+func (r *IVT) ReadWord(addr uint32) uint16 {
+	return uint16(r.mem[addr]) | uint16(r.mem[addr+1])<<8
+}
+
+func (r *IVT) ReadDWord(addr uint32) uint32 {
+	return uint32(r.mem[addr]) | uint32(r.mem[addr+1])<<8 | uint32(r.mem[addr+2])<<16 | uint32(r.mem[addr+3])<<24
+}
+
+func (r *IVT) Write(addr uint32, data uint8) {
+	r.mem[addr] = data
+}
+
+func (r *IVT) WriteWord(addr uint32, data uint16) {
+	r.mem[addr] = uint8(data)
+	r.mem[addr+1] = uint8(data >> 8)
+}
+
+func (r *IVT) WriteDWord(addr uint32, data uint32) {
+	r.mem[addr] = uint8(data)
+	r.mem[addr+1] = uint8(data >> 8)
+	r.mem[addr+2] = uint8(data >> 16)
+	r.mem[addr+3] = uint8(data >> 24)
+}
+
+func (r *IVT) Clear() {
+	for i := range r.mem {
+		r.mem[i] = 0
+	}
+}
+
+func NewIVT() *IVT {
+	return &IVT{}
 }
 
 type ROM struct {

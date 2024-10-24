@@ -9,6 +9,8 @@ import (
 const (
 	PageSize  = 4096
 	PageCount = 0x80000
+	IVTStart  = 0x88000000
+	IVTEnd    = 0x880003FF
 	RAMStart  = 0x00000000
 	RAMEnd    = 0x7FFFFFFF
 	ROMStart  = 0x80000000
@@ -91,6 +93,8 @@ func (mm *MemoryManager) TranslateAddress(virtualAddr uint32) (uint32, error) {
 	if virtualAddr >= ROMStart || virtualAddr <= ROMEnd {
 		return virtualAddr, nil
 	} else if virtualAddr >= VRAMStart || virtualAddr <= VRAMEnd {
+		return virtualAddr, nil
+	} else if virtualAddr >= IVTStart || virtualAddr <= IVTEnd {
 		return virtualAddr, nil
 	}
 	virtualPageNum := virtualAddr / PageSize
@@ -357,6 +361,9 @@ func (mm *MemoryManager) UnmapPage(addr uint32) {
 func (mm *MemoryManager) ExecuteJump(currentPC uint32, jumpAddr uint32) uint32 {
 	for _, info := range mm.Programs {
 		if currentPC >= info.StartAddress && currentPC < info.StartAddress+info.Size {
+			if jumpAddr >= RAMEnd {
+				return jumpAddr
+			}
 			translatedAddr, err := mm.TranslateAddress(info.StartAddress + jumpAddr)
 			if err != nil {
 				panic(err)

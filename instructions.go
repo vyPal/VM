@@ -1324,6 +1324,17 @@ var instructionSet = map[uint8]*Instruction{
 			{AllowedTypes: []OperandType{Reg, DMem, IMem, Imm}}, // B - Size
 		},
 	},
+	0x25: {
+		Opcode: 0x25,
+		Name:   "INT",
+		Execute: func(cpu *CPU, operands []Operand) {
+			cpu.MemoryManager.Push(cpu.Registers[16])
+			cpu.Registers[16] = cpu.MemoryManager.ExecuteJump(cpu.Registers[16], cpu.MemoryManager.ReadMemoryDWord(0x88000000+operands[0].Value.(*ImmOperand).Value))
+		},
+		Operands: []Operand{
+			{Type: Imm}, // A - Interrupt Number
+		},
+	},
 }
 
 func EncodeInstruction(inst *Instruction) []byte {

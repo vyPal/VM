@@ -8,6 +8,9 @@ _start:
   LD R1 loading
   CALL [print]
 
+  LD R0 int_test
+  ST [0x88000000] R0
+
   OPEN R1 [ramprogram]
   LOADBIN R1 R2
   CLOSE R1
@@ -19,3 +22,8 @@ _start:
   CALL [R2]
 
   HLT
+
+; interrupt handler
+int_test:
+  LD R15 0x1234
+  RET
