@@ -31,6 +31,12 @@ To assemble a file and save the bytecode to a file, use the `-bytecode` flag. If
 ./VM -bytecode -output test.bin test.asm
 ```
 
+### Printing calltable for assembly file(s)
+To print the calltable for an assembly file, use the `-calltable` flag.
+```bash
+./VM -calltable test.asm
+```
+
 ## Assembly
 The VM uses a custom assembly language. The following instructions are supported:
 <details>
@@ -74,19 +80,24 @@ The VM uses a custom assembly language. The following instructions are supported
 - `SEEK <r> <r/im/dm> <i>` - Seek to a position in a file
 - `LOADBIN <r> <r>` - Load a binary file into memory
 - `CLOSE <r>` - Close a file
+- `MALLOC <r/im/dm/i> <r>` - Allocate memory on heap, takes size and register to store the address
+- `FREE <r/dm/im> <r/dm/im/i>` - Free memory on heap, takes start address and size
+- `INT <i>` - Call an interrupt
 
 </details>
 
 ### Registers
-The VM has 16 general-purpose registers. Each register is 32 bits, but can be accessed as 8, 16, or 32 bits.
+The VM has 19 general-purpose registers. Each register is 32 bits, but can be accessed as 8, 16, or 32 bits.
 - `R0` - `R15`  - General-purpose Registers
-- `IP` - Instruction Pointer (Not directly accessible)
-- `SP` - Stack Pointer (Not directly accessible)
+- `R16 (PC)` - Program Counter
+- `R17 (SP)` - Stack Pointer
+- `R18 (HP)` - Heap Pointer
 
 ### Memory
 The VM supports up to 4GB of total memory. The memory is split into 3 sections:
 - `RAM` - 2GB of general-purpose R/W memory (0x00000000 - 0x7FFFFFFF)
 - `ROM` - 128MB of read-only memory (0x80000000 - 0x87FFFFFF)
+- `IVT` - 1KB for interrupt vector table (0x88000000 - 0x880003FF)
 - `VRAM` - 1KB of video memory (0xFFFFF000 - 0xFFFFFFFF)
 
 The rest of the memory is currently unused and reserved for future use.
@@ -96,6 +107,7 @@ Operands can be registers, immediate values, direct memory addresses, or indirec
 
 #### Registers
 Registers can be accessed as 8, 16, or 32 bits.
+You should use `R` with the appropriate number and size prefix, or you can use the special name (e.g. `PC`, `SP`, `HP`).
 ```asm
 R0 ; 32-bit register
 R0W ; 16-bit register
@@ -177,10 +189,30 @@ The possible values for size are:
 ### Sectors
 The assembly language allows the user to split the code into "sectors" by defining starting postitions for the `DATA` and `TEXT` sections. This is useful for creating libraries or splitting the code into multiple files.
 
-This can also be used to load the program at a specific address in memory, including the RAM, and executing from there, however this is not recommended.
+This can also be used to load the program at a specific address in memory, including the RAM, and executing from there, however this is not recommended and in some case not allowed.
+
+Specifically, this should only be used when creating a bootloader or a kernel, where the program needs to be loaded at a specific address in memory.
 ```asm
 ORG 0x00000000 ; Any data or instructions after this will be loaded at this address
 ```
+
+### Interrupts
+The VM supports software interrupts. To define a interrupt handler, define it as a label in the `.TEXT` section, and store it in the IVT.
+The IVT acts as another section of memory, and the address of the interrupt handler should be stored at the appropriate index in the IVT.
+Since each address needs to be stored as a 32-bit value, the IVT can store up to 256 interrupt handlers, each 4 bytes long.
+```asm
+.TEXT
+int0:
+    ; Interrupt handler code
+    RET ; Return from interrupt
+
+_start:
+    LD R0 int0 ; Load the address of the interrupt handler into a register
+    ST [0x88000000] R0 ; Store the address in the IVT
+
+    INT 0 ; Call the interrupt
+```
+
 ## Encoding instructions
 Each instruction is encoded as an array of bytes. The first byte is the opcode, followed by the operands.
 
@@ -200,8 +232,8 @@ If an operand supports multiple types, the operand type is encoded as a separate
 If the operand only supports one type, the operand value is directly encoded, and the type byte is omitted.
 
 #### Reg (Register)
-`(RegNum | RegSize << 4)`
-- `RegNum` - Register number (0-15)
+`(RegNum | RegSize << 6)`
+- `RegNum` - Register number (0-63)
 - `RegSize` - Register size (0-2)
 
 #### DMem (Direct Memory)
@@ -209,7 +241,7 @@ Before the value itself, the type of the operand is encoded as a separate byte.
 
 Depending on the type, the operand value is encoded differently:
 - `Address` - 32-bit memory address (encoded as 4 bytes in little-endian)
-- `Register` - Register number (0-15)
+- `Register` - Register number (0-63)
 - `Offset` - Register number (0-15) and 32-bit immediate value (register number encoded first, then 4 bytes in little-endian)
 
 #### IMem (Indirect Memory)
@@ -224,6 +256,7 @@ The bytecode format is a simple binary format that encodes the individual sector
 ### Header
 The bytecode file starts with a header that contains the following information:
 - `Magic` - 4 bytes (0x736F6265)
+- `Version` - 4 bytes (Version of the bytecode format)
 - `SectorCount` - 4 bytes (Number of sectors in the file)
 - `StartAddress` - 4 bytes (Address to use as the initial instruction pointer)
 
