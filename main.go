@@ -138,28 +138,44 @@ func main() {
 
 	uiEvents := ui.PollEvents()
 	ticker := time.NewTicker(simulationDelay)
+	isEscaped := true
+
 	for {
 		select {
 		case e := <-uiEvents:
 			switch e.ID {
+			case "<C-<Backspace>>":
+				isEscaped = !isEscaped
 			case "q", "<C-c>":
-				return
-			case "+":
-				simulationDelay /= 10
-				ticker.Reset(simulationDelay)
-			case "-":
-				simulationDelay *= 10
-				ticker.Reset(simulationDelay)
-			case "s":
-				c.Step()
-			case "r":
-				run = true
-			case "p":
-				run = false
-			case "c":
-				run = false
-				c.Reset()
-				c.LoadProgram(bc)
+				if isEscaped {
+					return
+				} else {
+					c.InputQueue <- e.ID
+				}
+
+			default:
+				if isEscaped {
+					switch e.ID {
+					case "+":
+						simulationDelay /= 10
+						ticker.Reset(simulationDelay)
+					case "-":
+						simulationDelay *= 10
+						ticker.Reset(simulationDelay)
+					case "s":
+						c.Step()
+					case "r":
+						run = true
+					case "p":
+						run = false
+					case "c":
+						run = false
+						c.Reset()
+						c.LoadProgram(bc)
+					}
+				} else {
+					c.InputQueue <- e.ID
+				}
 			}
 		case <-ticker.C:
 			if run {
@@ -179,7 +195,7 @@ func main() {
 				regDump.Text += fmt.Sprintf("R%d: %08x | R%d: %08x\n", i, v, i+8, c.Registers[i+8])
 			}
 
-			simInfo.Text = fmt.Sprintf("Frequency: %s\nHalted: %t\nRunning: %t\n\nPC: %08x\nSP: %08x\nHP: %08x", DurationToFrequency(simulationDelay), c.Halted, run, c.Registers[16], c.Registers[17], c.Registers[18])
+			simInfo.Text = fmt.Sprintf("Frequency: %s\nHalted: %t\nRunning: %t\nEscaped: %t\n\nPC: %08x\nSP: %08x\nHP: %08x", DurationToFrequency(simulationDelay), c.Halted, run, isEscaped, c.Registers[16], c.Registers[17], c.Registers[18])
 
 			memoryWindow.Text = drawMemoryWindow(c.MemoryManager, c.Registers[16])
 			accessWindow.Text = drawAccessWindow(c.MemoryManager, c.LastAccessedAddress)

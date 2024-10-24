@@ -5,11 +5,11 @@
 .TEXT
 ORG 0x80000000
 _start:
+  LD R0 int_test
+  ST [0x88000001] R0
+
   LD R1 loading
   CALL [print]
-
-  LD R0 int_test
-  ST [0x88000000] R0
 
   OPEN R1 [ramprogram]
   LOADBIN R1 R2
@@ -25,5 +25,8 @@ _start:
 
 ; interrupt handler
 int_test:
-  LD R15 0x1234
+  LD R14 0x1234
+  AND R15 0xFF
+  ST [0xFFFFF0F0] R15B
+  LD R12 R15
   RET
