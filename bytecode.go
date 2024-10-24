@@ -114,6 +114,10 @@ func DecodeBytecode(data []byte) (*Bytecode, error) {
 		return nil, err
 	}
 
+	if bc.Version != NewBytecode(0).Version {
+		return nil, fmt.Errorf("This bytecode was generated for a different version of the VM")
+	}
+
 	sectorCount, err := buffer.ReadByte()
 	if err != nil {
 		return nil, err
