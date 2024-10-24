@@ -179,12 +179,12 @@ func main() {
 				regDump.Text += fmt.Sprintf("R%d: %08x | R%d: %08x\n", i, v, i+8, c.Registers[i+8])
 			}
 
-			simInfo.Text = fmt.Sprintf("Frequency: %s\nHalted: %t\nRunning: %t\n\nPC: %08x\nSP: %08x\nHP: %08x", DurationToFrequency(simulationDelay), c.Halted, run, c.PC, c.MemoryManager.VirtualStackPtr, c.MemoryManager.VirtualHeapPtr)
+			simInfo.Text = fmt.Sprintf("Frequency: %s\nHalted: %t\nRunning: %t\n\nPC: %08x\nSP: %08x\nHP: %08x", DurationToFrequency(simulationDelay), c.Halted, run, c.Registers[16], c.Registers[17], c.Registers[18])
 
-			memoryWindow.Text = drawMemoryWindow(c.MemoryManager, c.PC)
+			memoryWindow.Text = drawMemoryWindow(c.MemoryManager, c.Registers[16])
 			accessWindow.Text = drawAccessWindow(c.MemoryManager, c.LastAccessedAddress)
 			stackWindow.Text = ""
-			stackMemory := c.MemoryManager.ReadMemoryN(c.MemoryManager.VirtualStackPtr, int(c.MemoryManager.VirtualStackEnd-c.MemoryManager.VirtualStackPtr))
+			stackMemory := c.MemoryManager.ReadMemoryN(c.Registers[17], int(c.MemoryManager.VirtualStackEnd-c.Registers[17]))
 			for i := 0; i < len(stackMemory); i += 4 {
 				if i+4 <= len(stackMemory) {
 					v := binary.LittleEndian.Uint32(stackMemory[i : i+4])
@@ -193,7 +193,7 @@ func main() {
 			}
 
 			heapWindow.Text = ""
-			heapMemory := c.MemoryManager.ReadMemoryN(c.MemoryManager.VirtualHeapStart, int(c.MemoryManager.VirtualHeapPtr))
+			heapMemory := c.MemoryManager.ReadMemoryN(c.MemoryManager.VirtualHeapStart, int(c.Registers[18]))
 			for i := 0; i < len(heapMemory); i += 4 {
 				if i+4 <= len(heapMemory) {
 					v := binary.LittleEndian.Uint32(heapMemory[i : i+4])

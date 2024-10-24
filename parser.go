@@ -378,6 +378,13 @@ func (p *Parser) ParseInstruction(line string) {
 }
 
 func getRegisterID(name string) (byte, error) {
+	if name == "PC" {
+		return 16, nil
+	} else if name == "SP" {
+		return 17, nil
+	} else if name == "HP" {
+		return 18, nil
+	}
 	id := strings.TrimSuffix(strings.TrimSuffix(name[1:], "B"), "L")
 	parsedValue, err := strconv.ParseUint(id, 10, 32)
 	if err != nil {
@@ -424,7 +431,7 @@ func (p *Parser) ParseOperand(arg string, operand *Operand, opName string) {
 			} else {
 				parsedValue, err := strconv.ParseUint(toParse, 0, 32)
 				if err != nil {
-					if toParse[0] == 'r' || toParse[0] == 'R' {
+					if toParse[0] == 'r' || toParse[0] == 'R' || toParse == "PC" || toParse == "SP" || toParse == "HP" {
 						rid, err := getRegisterID(toParse)
 						if err != nil {
 							operand.Value = &IMemOperand{Type: Address}
@@ -493,7 +500,7 @@ func (p *Parser) ParseOperand(arg string, operand *Operand, opName string) {
 			} else {
 				parsedValue, err := strconv.ParseUint(toParse, 0, 32)
 				if err != nil {
-					if toParse[0] == 'r' || toParse[0] == 'R' {
+					if toParse[0] == 'r' || toParse[0] == 'R' || toParse == "PC" || toParse == "SP" || toParse == "HP" {
 						rid, err := getRegisterID(toParse)
 						if err != nil {
 							operand.Value = &DMemOperand{Type: Address}
@@ -528,20 +535,28 @@ func (p *Parser) ParseOperand(arg string, operand *Operand, opName string) {
 				}
 			}
 		}
-	} else if arg[0] == 'r' || arg[0] == 'R' {
+	} else if arg[0] == 'r' || arg[0] == 'R' || arg == "PC" || arg == "SP" || arg == "HP" {
 		detectedType = Reg
-		id := strings.TrimSuffix(strings.TrimSuffix(arg[1:], "B"), "L")
-		parsedValue, err := strconv.ParseUint(id, 10, 32)
-		if err != nil {
-			panic(arg + " is not a valid register for " + opName + ": " + err.Error())
+		if arg == "PC" {
+			operand.Value = &RegOperand{RegNum: 16, Size: 0}
+		} else if arg == "SP" {
+			operand.Value = &RegOperand{RegNum: 17, Size: 0}
+		} else if arg == "HP" {
+			operand.Value = &RegOperand{RegNum: 18, Size: 0}
+		} else {
+			id := strings.TrimSuffix(strings.TrimSuffix(arg[1:], "B"), "L")
+			parsedValue, err := strconv.ParseUint(id, 10, 32)
+			if err != nil {
+				panic(arg + " is not a valid register for " + opName + ": " + err.Error())
+			}
+			size := 0x0
+			if strings.HasSuffix(arg, "B") {
+				size = 0x2
+			} else if strings.HasSuffix(arg, "L") {
+				size = 0x1
+			}
+			operand.Value = &RegOperand{RegNum: byte(parsedValue), Size: byte(size)}
 		}
-		size := 0x0
-		if strings.HasSuffix(arg, "B") {
-			size = 0x2
-		} else if strings.HasSuffix(arg, "L") {
-			size = 0x1
-		}
-		operand.Value = &RegOperand{RegNum: byte(parsedValue), Size: byte(size)}
 	} else {
 		detectedType = Imm
 		parsedValue, err := strconv.ParseUint(arg, 0, 32)

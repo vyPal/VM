@@ -6,8 +6,7 @@ import (
 
 type CPU struct {
 	MemoryManager       *MemoryManager
-	Registers           [16]uint32
-	PC                  uint32
+	Registers           [19]uint32 // 0-15: General purpose, 16: Instruction register, 17: Stack pointer, 18: Heap pointer
 	Halted              bool
 	LastAccessedAddress uint32
 	FileSystem          VFS
@@ -16,20 +15,19 @@ type CPU struct {
 }
 
 func NewCPU() *CPU {
-	return &CPU{
-		MemoryManager: NewMemoryManager(NewMemory()),
-		Registers:     [16]uint32{},
-		PC:            0,
-		Halted:        false,
-		FileTable:     make(map[uint32]interface{}),
-		NextFD:        0,
+	cpu := &CPU{
+		Registers: [19]uint32{},
+		Halted:    false,
+		FileTable: make(map[uint32]interface{}),
+		NextFD:    0,
 	}
+	cpu.MemoryManager = NewMemoryManager(cpu, NewMemory())
+	return cpu
 }
 
 func (c *CPU) Reset() {
-	c.MemoryManager = NewMemoryManager(NewMemory())
-	c.Registers = [16]uint32{}
-	c.PC = 0
+	c.MemoryManager = NewMemoryManager(c, NewMemory())
+	c.Registers = [19]uint32{}
 	c.Halted = false
 	for _, v := range c.FileTable {
 		c.FileSystem.Close(v)
@@ -42,7 +40,7 @@ func (c *CPU) Step() {
 	if c.Halted {
 		return
 	}
-	instr := DecodeInstruction(c.MemoryManager, &c.PC)
+	instr := DecodeInstruction(c.MemoryManager, &c.Registers[16])
 	instr.Execute(c, instr.Operands)
 }
 
@@ -63,12 +61,12 @@ func (c *CPU) LoadProgram(program *Bytecode) {
 		}
 	}
 
-	c.PC = program.StartAddress
+	c.Registers[16] = program.StartAddress
 
 	if p != nil {
 		start := c.MemoryManager.LoadProgram(p)
-		if c.PC < 0x80000000 {
-			c.PC = start
+		if c.Registers[16] < 0x80000000 {
+			c.Registers[16] = start
 		}
 	}
 }

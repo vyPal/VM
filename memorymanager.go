@@ -31,26 +31,27 @@ type ProgramInfoSector struct {
 
 type MemoryManager struct {
 	Memory           *Memory
+	cpu              *CPU
 	Programs         []*ProgramInfo
 	PageTable        map[uint32]uint32
 	FreeFrames       []uint32
 	VirtualStackEnd  uint32
-	VirtualStackPtr  uint32
 	VirtualHeapStart uint32
-	VirtualHeapPtr   uint32
 }
 
-func NewMemoryManager(memory *Memory) *MemoryManager {
+func NewMemoryManager(cpu *CPU, memory *Memory) *MemoryManager {
 	mm := &MemoryManager{
 		Memory:           memory,
+		cpu:              cpu,
 		Programs:         []*ProgramInfo{},
 		PageTable:        make(map[uint32]uint32),
 		FreeFrames:       []uint32{},
 		VirtualStackEnd:  0x7FFFFFFF,
-		VirtualStackPtr:  0x7FFFFFFF,
 		VirtualHeapStart: 0x00000000,
-		VirtualHeapPtr:   0x00000000,
 	}
+
+	mm.cpu.Registers[17] = mm.VirtualStackEnd
+	mm.cpu.Registers[18] = mm.VirtualHeapStart
 
 	for i := uint32(0); i < PageCount; i++ {
 		mm.FreeFrames = append(mm.FreeFrames, i)
@@ -205,39 +206,39 @@ func (mm *MemoryManager) WriteNMemory(addr uint32, data []byte) error {
 }
 
 func (mm *MemoryManager) Push(value uint32) {
-	if mm.VirtualStackPtr-4 < mm.VirtualHeapPtr {
+	if mm.cpu.Registers[17]-4 < mm.cpu.Registers[18] {
 		if err := mm.GrowStack(); err != nil {
 			panic(err)
 		}
 	}
 
-	mm.VirtualStackPtr -= 4
+	mm.cpu.Registers[17] -= 4
 
-	if err := mm.MapVirtualToPhysical(mm.VirtualStackPtr); err != nil {
+	if err := mm.MapVirtualToPhysical(mm.cpu.Registers[17]); err != nil {
 		panic(err)
 	}
 
 	valueBytes := make([]byte, 4)
 	binary.LittleEndian.PutUint32(valueBytes, value)
-	err := mm.WriteNMemory(mm.VirtualStackPtr, valueBytes)
+	err := mm.WriteNMemory(mm.cpu.Registers[17], valueBytes)
 	if err != nil {
 		panic(err)
 	}
 }
 
 func (mm *MemoryManager) Pop() uint32 {
-	if mm.VirtualStackPtr >= mm.VirtualStackEnd {
+	if mm.cpu.Registers[17] >= mm.VirtualStackEnd {
 		panic("stack underflow")
 	}
 
-	valueBytes, err := mm.ReadNMemory(mm.VirtualStackPtr, 4)
+	valueBytes, err := mm.ReadNMemory(mm.cpu.Registers[17], 4)
 	if err != nil {
 		panic(err)
 	}
 
 	value := binary.LittleEndian.Uint32(valueBytes)
 
-	mm.VirtualStackPtr += 4
+	mm.cpu.Registers[17] += 4
 
 	mm.TryShrinkStack()
 
@@ -246,10 +247,10 @@ func (mm *MemoryManager) Pop() uint32 {
 
 func (mm *MemoryManager) Malloc(size uint32) (uint32, error) {
 	alignedSize := (size + 3) & ^uint32(3)
-	startAddr := mm.VirtualHeapPtr
+	startAddr := mm.cpu.Registers[18]
 	endAddr := startAddr + alignedSize
 
-	for endAddr > mm.VirtualHeapPtr {
+	for endAddr > mm.cpu.Registers[18] {
 		if err := mm.GrowHeap(); err != nil {
 			return 0, err
 		}
@@ -276,8 +277,8 @@ func (mm *MemoryManager) Free(addr uint32, size uint32) {
 }
 
 func (mm *MemoryManager) GrowStack() error {
-	newStackPtr := mm.VirtualStackPtr - PageSize
-	if newStackPtr <= mm.VirtualHeapPtr {
+	newStackPtr := mm.cpu.Registers[17] - PageSize
+	if newStackPtr <= mm.cpu.Registers[18] {
 		return errors.New("cannot grow stack: collision with heap")
 	}
 
@@ -285,13 +286,13 @@ func (mm *MemoryManager) GrowStack() error {
 		return err
 	}
 
-	mm.VirtualStackPtr = newStackPtr
+	mm.cpu.Registers[17] = newStackPtr
 	return nil
 }
 
 func (mm *MemoryManager) TryShrinkStack() {
-	if (mm.VirtualStackPtr%PageSize == 0) && (mm.VirtualStackPtr < mm.VirtualStackEnd) {
-		topPageStart := mm.VirtualStackPtr
+	if (mm.cpu.Registers[17]%PageSize == 0) && (mm.cpu.Registers[17] < mm.VirtualStackEnd) {
+		topPageStart := mm.cpu.Registers[17]
 		topPageEnd := topPageStart + PageSize
 
 		isEmpty := true
@@ -305,29 +306,29 @@ func (mm *MemoryManager) TryShrinkStack() {
 
 		if isEmpty {
 			mm.UnmapPage(topPageStart)
-			mm.VirtualStackPtr += PageSize
+			mm.cpu.Registers[17] += PageSize
 		}
 	}
 }
 
 func (mm *MemoryManager) GrowHeap() error {
-	newHeapPtr := mm.VirtualHeapPtr + PageSize
-	if newHeapPtr >= mm.VirtualStackPtr {
+	newHeapPtr := mm.cpu.Registers[18] + PageSize
+	if newHeapPtr >= mm.cpu.Registers[17] {
 		return errors.New("cannot grow heap: collision with stack")
 	}
 
-	if err := mm.MapVirtualToPhysical(mm.VirtualHeapPtr); err != nil {
+	if err := mm.MapVirtualToPhysical(mm.cpu.Registers[18]); err != nil {
 		return err
 	}
 
-	mm.VirtualHeapPtr = newHeapPtr
+	mm.cpu.Registers[18] = newHeapPtr
 	return nil
 }
 
 func (mm *MemoryManager) TryShrinkHeap() {
-	if (mm.VirtualHeapPtr%PageSize == 0) && (mm.VirtualHeapPtr > mm.VirtualHeapStart) {
-		topPageStart := mm.VirtualHeapPtr - PageSize
-		topPageEnd := mm.VirtualHeapPtr
+	if (mm.cpu.Registers[18]%PageSize == 0) && (mm.cpu.Registers[18] > mm.VirtualHeapStart) {
+		topPageStart := mm.cpu.Registers[18] - PageSize
+		topPageEnd := mm.cpu.Registers[18]
 
 		isEmpty := true
 		for addr := topPageStart; addr < topPageEnd; addr += 4 {
@@ -340,7 +341,7 @@ func (mm *MemoryManager) TryShrinkHeap() {
 
 		if isEmpty {
 			mm.UnmapPage(topPageStart)
-			mm.VirtualHeapPtr -= PageSize
+			mm.cpu.Registers[18] -= PageSize
 		}
 	}
 }
