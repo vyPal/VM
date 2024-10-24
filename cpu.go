@@ -66,6 +66,9 @@ func (c *CPU) LoadProgram(program *Bytecode) {
 	c.PC = program.StartAddress
 
 	if p != nil {
-		c.PC = c.MemoryManager.LoadProgram(p)
+		start := c.MemoryManager.LoadProgram(p)
+		if c.PC < 0x80000000 {
+			c.PC = start
+		}
 	}
 }

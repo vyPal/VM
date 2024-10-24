@@ -25,7 +25,7 @@ const (
 
 type RegOperand struct {
 	RegNum byte
-	Size   byte // 0x0 = 32-bit, 0x1 = 16-bit, 0x2 = 8-bit
+	Size   byte // 0x0 = 32-bit, 0x1 = 16-bit, 0x2 = 8-bit, onlt first 2 bits are used
 }
 
 type MemType int
@@ -1333,7 +1333,7 @@ func EncodeInstruction(inst *Instruction) []byte {
 		if len(operand.AllowedTypes) == 0 {
 			switch operand.Type {
 			case Reg:
-				buf.WriteByte(byte(operand.Value.(*RegOperand).RegNum) | byte(operand.Value.(*RegOperand).Size)<<4)
+				buf.WriteByte(byte(operand.Value.(*RegOperand).RegNum) | byte(operand.Value.(*RegOperand).Size)<<6)
 			case DMem:
 				buf.WriteByte(byte(operand.Value.(*DMemOperand).Type))
 				if operand.Value.(*DMemOperand).Type == Address {
@@ -1361,7 +1361,7 @@ func EncodeInstruction(inst *Instruction) []byte {
 			switch operand.Type {
 			case Reg:
 				buf.WriteByte(byte(Reg))
-				buf.WriteByte(byte(operand.Value.(*RegOperand).RegNum) | byte(operand.Value.(*RegOperand).Size)<<4)
+				buf.WriteByte(byte(operand.Value.(*RegOperand).RegNum) | byte(operand.Value.(*RegOperand).Size)<<6)
 			case DMem:
 				buf.WriteByte(byte(DMem))
 				buf.WriteByte(byte(operand.Value.(*DMemOperand).Type))
@@ -1403,7 +1403,7 @@ func DecodeInstruction(mem *MemoryManager, pc *uint32) *Instruction {
 			switch operand.Type {
 			case Reg:
 				data = append(data, mem.ReadMemory(*pc+uint32(offset)))
-				operands[i] = Operand{Type: Reg, Value: &RegOperand{RegNum: data[offset] & 0xF, Size: data[offset] >> 4}}
+				operands[i] = Operand{Type: Reg, Value: &RegOperand{RegNum: data[offset] & 0x3F, Size: data[offset] >> 6}}
 				offset++
 			case DMem:
 				data = append(data, mem.ReadMemory(*pc+uint32(offset)))
@@ -1449,7 +1449,7 @@ func DecodeInstruction(mem *MemoryManager, pc *uint32) *Instruction {
 			switch data[offset] {
 			case byte(Reg):
 				data = append(data, mem.ReadMemory(*pc+uint32(offset+1)))
-				operands[i] = Operand{Type: Reg, Value: &RegOperand{RegNum: data[offset+1] & 0xF, Size: data[offset+1] >> 4}}
+				operands[i] = Operand{Type: Reg, Value: &RegOperand{RegNum: data[offset+1] & 0x3F, Size: data[offset+1] >> 6}}
 				offset += 2
 			case byte(DMem):
 				data = append(data, mem.ReadMemory(*pc+uint32(offset+1)))

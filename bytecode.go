@@ -24,7 +24,7 @@ func NewBytecode(magicNumber uint32) *Bytecode {
 	return &Bytecode{
 		MagicNumber: magicNumber,
 		SectorCount: 0,
-		Version:     1,
+		Version:     2,
 		Sectors:     []BCSector{},
 	}
 }

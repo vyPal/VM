@@ -4,6 +4,7 @@
   rt2 DB "rt2.bin", 0
 .TEXT
 ORG 0x80000000
+_start:
   LD R1 loading
   CALL [print]
 
