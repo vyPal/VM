@@ -148,11 +148,13 @@ func (vfs *FolderBasedVFS) LoadBinary(file interface{}, mm *MemoryManager) uint3
 		panic(err)
 	}
 
+	program := mm.NewProgram()
+
 	for _, sector := range bc.Sectors {
 		if sector.Bytecode != nil {
-			mm.Memory.LoadProgram(sector.StartAddress, sector.Bytecode)
+			mm.AddSector(program, sector.StartAddress, sector.Bytecode, bc.StartAddress == sector.StartAddress)
 		}
 	}
 
-	return bc.StartAddress
+	return mm.LoadProgram(program)
 }

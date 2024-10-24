@@ -25,7 +25,7 @@ const (
 
 type RegOperand struct {
 	RegNum byte
-	Size   byte // 0x0 = 32-bit, 0x1 = 16-bit, 0x2 = 8-bit
+	Size   byte // 0x0 = 32-bit, 0x1 = 16-bit, 0x2 = 8-bit, onlt first 2 bits are used
 }
 
 type MemType int
@@ -806,14 +806,14 @@ var instructionSet = map[uint8]*Instruction{
 		Execute: func(cpu *CPU, operands []Operand) {
 			switch operands[0].Type {
 			case DMem:
-				cpu.Registers[0xF] = cpu.PC
-				cpu.PC = cpu.MemoryManager.ExecuteJump(cpu.PC, operands[0].Value.(*DMemOperand).ComputeAddress(cpu))
+				cpu.Registers[0xF] = cpu.Registers[16]
+				cpu.Registers[16] = cpu.MemoryManager.ExecuteJump(cpu.Registers[16], operands[0].Value.(*DMemOperand).ComputeAddress(cpu))
 			case IMem:
-				cpu.Registers[0xF] = cpu.PC
-				cpu.PC = cpu.MemoryManager.ExecuteJump(cpu.PC, cpu.MemoryManager.ReadMemoryDWord(operands[0].Value.(*IMemOperand).ComputeAddress(cpu)))
+				cpu.Registers[0xF] = cpu.Registers[16]
+				cpu.Registers[16] = cpu.MemoryManager.ExecuteJump(cpu.Registers[16], cpu.MemoryManager.ReadMemoryDWord(operands[0].Value.(*IMemOperand).ComputeAddress(cpu)))
 			case Imm:
-				cpu.Registers[0xF] = cpu.PC
-				cpu.PC = cpu.MemoryManager.ExecuteJump(cpu.PC, operands[0].Value.(*ImmOperand).Value)
+				cpu.Registers[0xF] = cpu.Registers[16]
+				cpu.Registers[16] = cpu.MemoryManager.ExecuteJump(cpu.Registers[16], operands[0].Value.(*ImmOperand).Value)
 			}
 		},
 		Operands: []Operand{
@@ -827,15 +827,15 @@ var instructionSet = map[uint8]*Instruction{
 			switch operands[0].Type {
 			case DMem:
 				if cpu.Registers[0xF] == 0x0 {
-					cpu.PC = cpu.MemoryManager.ExecuteJump(cpu.PC, operands[0].Value.(*DMemOperand).ComputeAddress(cpu))
+					cpu.Registers[16] = cpu.MemoryManager.ExecuteJump(cpu.Registers[16], operands[0].Value.(*DMemOperand).ComputeAddress(cpu))
 				}
 			case IMem:
 				if cpu.Registers[0xF] == 0x0 {
-					cpu.PC = cpu.MemoryManager.ExecuteJump(cpu.PC, cpu.MemoryManager.ReadMemoryDWord(operands[0].Value.(*IMemOperand).ComputeAddress(cpu)))
+					cpu.Registers[16] = cpu.MemoryManager.ExecuteJump(cpu.Registers[16], cpu.MemoryManager.ReadMemoryDWord(operands[0].Value.(*IMemOperand).ComputeAddress(cpu)))
 				}
 			case Imm:
 				if cpu.Registers[0xF] == 0x0 {
-					cpu.PC = cpu.MemoryManager.ExecuteJump(cpu.PC, operands[0].Value.(*ImmOperand).Value)
+					cpu.Registers[16] = cpu.MemoryManager.ExecuteJump(cpu.Registers[16], operands[0].Value.(*ImmOperand).Value)
 				}
 			}
 		},
@@ -850,15 +850,15 @@ var instructionSet = map[uint8]*Instruction{
 			switch operands[0].Type {
 			case DMem:
 				if cpu.Registers[0xF] != 0x0 {
-					cpu.PC = cpu.MemoryManager.ExecuteJump(cpu.PC, operands[0].Value.(*DMemOperand).ComputeAddress(cpu))
+					cpu.Registers[16] = cpu.MemoryManager.ExecuteJump(cpu.Registers[16], operands[0].Value.(*DMemOperand).ComputeAddress(cpu))
 				}
 			case IMem:
 				if cpu.Registers[0xF] != 0x0 {
-					cpu.PC = cpu.MemoryManager.ExecuteJump(cpu.PC, cpu.MemoryManager.ReadMemoryDWord(operands[0].Value.(*IMemOperand).ComputeAddress(cpu)))
+					cpu.Registers[16] = cpu.MemoryManager.ExecuteJump(cpu.Registers[16], cpu.MemoryManager.ReadMemoryDWord(operands[0].Value.(*IMemOperand).ComputeAddress(cpu)))
 				}
 			case Imm:
 				if cpu.Registers[0xF] != 0x0 {
-					cpu.PC = cpu.MemoryManager.ExecuteJump(cpu.PC, operands[0].Value.(*ImmOperand).Value)
+					cpu.Registers[16] = cpu.MemoryManager.ExecuteJump(cpu.Registers[16], operands[0].Value.(*ImmOperand).Value)
 				}
 			}
 		},
@@ -873,15 +873,15 @@ var instructionSet = map[uint8]*Instruction{
 			switch operands[0].Type {
 			case DMem:
 				if cpu.Registers[0xF] == 0x1 {
-					cpu.PC = cpu.MemoryManager.ExecuteJump(cpu.PC, operands[0].Value.(*DMemOperand).ComputeAddress(cpu))
+					cpu.Registers[16] = cpu.MemoryManager.ExecuteJump(cpu.Registers[16], operands[0].Value.(*DMemOperand).ComputeAddress(cpu))
 				}
 			case IMem:
 				if cpu.Registers[0xF] == 0x1 {
-					cpu.PC = cpu.MemoryManager.ExecuteJump(cpu.PC, cpu.MemoryManager.ReadMemoryDWord(operands[0].Value.(*IMemOperand).ComputeAddress(cpu)))
+					cpu.Registers[16] = cpu.MemoryManager.ExecuteJump(cpu.Registers[16], cpu.MemoryManager.ReadMemoryDWord(operands[0].Value.(*IMemOperand).ComputeAddress(cpu)))
 				}
 			case Imm:
 				if cpu.Registers[0xF] == 0x1 {
-					cpu.PC = cpu.MemoryManager.ExecuteJump(cpu.PC, operands[0].Value.(*ImmOperand).Value)
+					cpu.Registers[16] = cpu.MemoryManager.ExecuteJump(cpu.Registers[16], operands[0].Value.(*ImmOperand).Value)
 				}
 			}
 		},
@@ -896,15 +896,15 @@ var instructionSet = map[uint8]*Instruction{
 			switch operands[0].Type {
 			case DMem:
 				if cpu.Registers[0xF] == 0x2 {
-					cpu.PC = cpu.MemoryManager.ExecuteJump(cpu.PC, operands[0].Value.(*DMemOperand).ComputeAddress(cpu))
+					cpu.Registers[16] = cpu.MemoryManager.ExecuteJump(cpu.Registers[16], operands[0].Value.(*DMemOperand).ComputeAddress(cpu))
 				}
 			case IMem:
 				if cpu.Registers[0xF] == 0x2 {
-					cpu.PC = cpu.MemoryManager.ExecuteJump(cpu.PC, cpu.MemoryManager.ReadMemoryDWord(operands[0].Value.(*IMemOperand).ComputeAddress(cpu)))
+					cpu.Registers[16] = cpu.MemoryManager.ExecuteJump(cpu.Registers[16], cpu.MemoryManager.ReadMemoryDWord(operands[0].Value.(*IMemOperand).ComputeAddress(cpu)))
 				}
 			case Imm:
 				if cpu.Registers[0xF] == 0x2 {
-					cpu.PC = cpu.MemoryManager.ExecuteJump(cpu.PC, operands[0].Value.(*ImmOperand).Value)
+					cpu.Registers[16] = cpu.MemoryManager.ExecuteJump(cpu.Registers[16], operands[0].Value.(*ImmOperand).Value)
 				}
 			}
 		},
@@ -919,15 +919,15 @@ var instructionSet = map[uint8]*Instruction{
 			switch operands[0].Type {
 			case DMem:
 				if cpu.Registers[0xF] == 0x0 || cpu.Registers[0xF] == 0x1 {
-					cpu.PC = cpu.MemoryManager.ExecuteJump(cpu.PC, operands[0].Value.(*DMemOperand).ComputeAddress(cpu))
+					cpu.Registers[16] = cpu.MemoryManager.ExecuteJump(cpu.Registers[16], operands[0].Value.(*DMemOperand).ComputeAddress(cpu))
 				}
 			case IMem:
 				if cpu.Registers[0xF] == 0x0 || cpu.Registers[0xF] == 0x1 {
-					cpu.PC = cpu.MemoryManager.ExecuteJump(cpu.PC, cpu.MemoryManager.ReadMemoryDWord(operands[0].Value.(*IMemOperand).ComputeAddress(cpu)))
+					cpu.Registers[16] = cpu.MemoryManager.ExecuteJump(cpu.Registers[16], cpu.MemoryManager.ReadMemoryDWord(operands[0].Value.(*IMemOperand).ComputeAddress(cpu)))
 				}
 			case Imm:
 				if cpu.Registers[0xF] == 0x0 || cpu.Registers[0xF] == 0x1 {
-					cpu.PC = cpu.MemoryManager.ExecuteJump(cpu.PC, operands[0].Value.(*ImmOperand).Value)
+					cpu.Registers[16] = cpu.MemoryManager.ExecuteJump(cpu.Registers[16], operands[0].Value.(*ImmOperand).Value)
 				}
 			}
 		},
@@ -942,15 +942,15 @@ var instructionSet = map[uint8]*Instruction{
 			switch operands[0].Type {
 			case DMem:
 				if cpu.Registers[0xF] == 0x0 || cpu.Registers[0xF] == 0x2 {
-					cpu.PC = cpu.MemoryManager.ExecuteJump(cpu.PC, operands[0].Value.(*DMemOperand).ComputeAddress(cpu))
+					cpu.Registers[16] = cpu.MemoryManager.ExecuteJump(cpu.Registers[16], operands[0].Value.(*DMemOperand).ComputeAddress(cpu))
 				}
 			case IMem:
 				if cpu.Registers[0xF] == 0x0 || cpu.Registers[0xF] == 0x2 {
-					cpu.PC = cpu.MemoryManager.ExecuteJump(cpu.PC, cpu.MemoryManager.ReadMemoryDWord(operands[0].Value.(*IMemOperand).ComputeAddress(cpu)))
+					cpu.Registers[16] = cpu.MemoryManager.ExecuteJump(cpu.Registers[16], cpu.MemoryManager.ReadMemoryDWord(operands[0].Value.(*IMemOperand).ComputeAddress(cpu)))
 				}
 			case Imm:
 				if cpu.Registers[0xF] == 0x0 || cpu.Registers[0xF] == 0x2 {
-					cpu.PC = cpu.MemoryManager.ExecuteJump(cpu.PC, operands[0].Value.(*ImmOperand).Value)
+					cpu.Registers[16] = cpu.MemoryManager.ExecuteJump(cpu.Registers[16], operands[0].Value.(*ImmOperand).Value)
 				}
 			}
 		},
@@ -964,14 +964,14 @@ var instructionSet = map[uint8]*Instruction{
 		Execute: func(cpu *CPU, operands []Operand) {
 			switch operands[0].Type {
 			case DMem:
-				cpu.MemoryManager.Push(cpu.PC)
-				cpu.PC = cpu.MemoryManager.ExecuteJump(cpu.PC, operands[0].Value.(*DMemOperand).ComputeAddress(cpu))
+				cpu.MemoryManager.Push(cpu.Registers[16])
+				cpu.Registers[16] = cpu.MemoryManager.ExecuteJump(cpu.Registers[16], operands[0].Value.(*DMemOperand).ComputeAddress(cpu))
 			case IMem:
-				cpu.MemoryManager.Push(cpu.PC)
-				cpu.PC = cpu.MemoryManager.ExecuteJump(cpu.PC, cpu.MemoryManager.ReadMemoryDWord(operands[0].Value.(*IMemOperand).ComputeAddress(cpu)))
+				cpu.MemoryManager.Push(cpu.Registers[16])
+				cpu.Registers[16] = cpu.MemoryManager.ExecuteJump(cpu.Registers[16], cpu.MemoryManager.ReadMemoryDWord(operands[0].Value.(*IMemOperand).ComputeAddress(cpu)))
 			case Imm:
-				cpu.MemoryManager.Push(cpu.PC)
-				cpu.PC = cpu.MemoryManager.ExecuteJump(cpu.PC, operands[0].Value.(*ImmOperand).Value)
+				cpu.MemoryManager.Push(cpu.Registers[16])
+				cpu.Registers[16] = cpu.MemoryManager.ExecuteJump(cpu.Registers[16], operands[0].Value.(*ImmOperand).Value)
 			}
 		},
 		Operands: []Operand{
@@ -982,7 +982,7 @@ var instructionSet = map[uint8]*Instruction{
 		Opcode: 0x17,
 		Name:   "RET",
 		Execute: func(cpu *CPU, operands []Operand) {
-			cpu.PC = cpu.MemoryManager.ExecuteJump(cpu.PC, cpu.MemoryManager.Pop())
+			cpu.Registers[16] = cpu.MemoryManager.ExecuteJump(cpu.Registers[16], cpu.MemoryManager.Pop())
 		},
 	},
 	0x18: {
@@ -1263,6 +1263,78 @@ var instructionSet = map[uint8]*Instruction{
 			{Type: Reg}, // A - FD
 		},
 	},
+	0x23: {
+		Opcode: 0x23,
+		Name:   "MALLOC",
+		Execute: func(cpu *CPU, operands []Operand) {
+			var size uint32
+			switch operands[0].Type {
+			case Reg:
+				size = cpu.Registers[operands[0].Value.(*RegOperand).RegNum]
+			case DMem:
+				cpu.LastAccessedAddress = operands[0].Value.(*DMemOperand).ComputeAddress(cpu)
+				size = cpu.MemoryManager.ReadMemoryDWord(operands[0].Value.(*DMemOperand).ComputeAddress(cpu))
+			case IMem:
+				cpu.LastAccessedAddress = cpu.MemoryManager.ReadMemoryDWord(operands[0].Value.(*IMemOperand).ComputeAddress(cpu))
+				size = cpu.MemoryManager.ReadMemoryDWord(cpu.MemoryManager.ReadMemoryDWord(operands[0].Value.(*IMemOperand).ComputeAddress(cpu)))
+			case Imm:
+				size = operands[0].Value.(*ImmOperand).Value
+			}
+			addr, err := cpu.MemoryManager.Malloc(size)
+			if err != nil {
+				cpu.Registers[operands[1].Value.(*RegOperand).RegNum] = 0xFFFFFFFF
+			}
+			cpu.Registers[operands[1].Value.(*RegOperand).RegNum] = addr
+		},
+		Operands: []Operand{
+			{AllowedTypes: []OperandType{Reg, DMem, IMem, Imm}}, // A - Size
+			{Type: Reg}, // B - Dest
+		},
+	},
+	0x24: {
+		Opcode: 0x24,
+		Name:   "FREE",
+		Execute: func(cpu *CPU, operands []Operand) {
+			var size uint32
+			switch operands[1].Type {
+			case Reg:
+				size = cpu.Registers[operands[1].Value.(*RegOperand).RegNum]
+			case DMem:
+				cpu.LastAccessedAddress = operands[1].Value.(*DMemOperand).ComputeAddress(cpu)
+				size = cpu.MemoryManager.ReadMemoryDWord(operands[1].Value.(*DMemOperand).ComputeAddress(cpu))
+			case IMem:
+				cpu.LastAccessedAddress = cpu.MemoryManager.ReadMemoryDWord(operands[1].Value.(*IMemOperand).ComputeAddress(cpu))
+				size = cpu.MemoryManager.ReadMemoryDWord(cpu.MemoryManager.ReadMemoryDWord(operands[1].Value.(*IMemOperand).ComputeAddress(cpu)))
+			case Imm:
+				size = operands[1].Value.(*ImmOperand).Value
+			}
+			switch operands[0].Type {
+			case Reg:
+				cpu.MemoryManager.Free(cpu.Registers[operands[0].Value.(*RegOperand).RegNum], size)
+			case DMem:
+				cpu.LastAccessedAddress = operands[0].Value.(*DMemOperand).ComputeAddress(cpu)
+				cpu.MemoryManager.Free(cpu.MemoryManager.ReadMemoryDWord(operands[0].Value.(*DMemOperand).ComputeAddress(cpu)), size)
+			case IMem:
+				cpu.LastAccessedAddress = cpu.MemoryManager.ReadMemoryDWord(operands[0].Value.(*IMemOperand).ComputeAddress(cpu))
+				cpu.MemoryManager.Free(cpu.MemoryManager.ReadMemoryDWord(cpu.MemoryManager.ReadMemoryDWord(operands[0].Value.(*IMemOperand).ComputeAddress(cpu))), size)
+			}
+		},
+		Operands: []Operand{
+			{AllowedTypes: []OperandType{Reg, DMem, IMem}},      // A - Start Address
+			{AllowedTypes: []OperandType{Reg, DMem, IMem, Imm}}, // B - Size
+		},
+	},
+	0x25: {
+		Opcode: 0x25,
+		Name:   "INT",
+		Execute: func(cpu *CPU, operands []Operand) {
+			cpu.MemoryManager.Push(cpu.Registers[16])
+			cpu.Registers[16] = cpu.MemoryManager.ExecuteJump(cpu.Registers[16], cpu.MemoryManager.ReadMemoryDWord(0x88000000+operands[0].Value.(*ImmOperand).Value))
+		},
+		Operands: []Operand{
+			{Type: Imm}, // A - Interrupt Number
+		},
+	},
 }
 
 func EncodeInstruction(inst *Instruction) []byte {
@@ -1272,7 +1344,7 @@ func EncodeInstruction(inst *Instruction) []byte {
 		if len(operand.AllowedTypes) == 0 {
 			switch operand.Type {
 			case Reg:
-				buf.WriteByte(byte(operand.Value.(*RegOperand).RegNum) | byte(operand.Value.(*RegOperand).Size)<<4)
+				buf.WriteByte(byte(operand.Value.(*RegOperand).RegNum) | byte(operand.Value.(*RegOperand).Size)<<6)
 			case DMem:
 				buf.WriteByte(byte(operand.Value.(*DMemOperand).Type))
 				if operand.Value.(*DMemOperand).Type == Address {
@@ -1300,7 +1372,7 @@ func EncodeInstruction(inst *Instruction) []byte {
 			switch operand.Type {
 			case Reg:
 				buf.WriteByte(byte(Reg))
-				buf.WriteByte(byte(operand.Value.(*RegOperand).RegNum) | byte(operand.Value.(*RegOperand).Size)<<4)
+				buf.WriteByte(byte(operand.Value.(*RegOperand).RegNum) | byte(operand.Value.(*RegOperand).Size)<<6)
 			case DMem:
 				buf.WriteByte(byte(DMem))
 				buf.WriteByte(byte(operand.Value.(*DMemOperand).Type))
@@ -1342,7 +1414,7 @@ func DecodeInstruction(mem *MemoryManager, pc *uint32) *Instruction {
 			switch operand.Type {
 			case Reg:
 				data = append(data, mem.ReadMemory(*pc+uint32(offset)))
-				operands[i] = Operand{Type: Reg, Value: &RegOperand{RegNum: data[offset] & 0xF, Size: data[offset] >> 4}}
+				operands[i] = Operand{Type: Reg, Value: &RegOperand{RegNum: data[offset] & 0x3F, Size: data[offset] >> 6}}
 				offset++
 			case DMem:
 				data = append(data, mem.ReadMemory(*pc+uint32(offset)))
@@ -1388,7 +1460,7 @@ func DecodeInstruction(mem *MemoryManager, pc *uint32) *Instruction {
 			switch data[offset] {
 			case byte(Reg):
 				data = append(data, mem.ReadMemory(*pc+uint32(offset+1)))
-				operands[i] = Operand{Type: Reg, Value: &RegOperand{RegNum: data[offset+1] & 0xF, Size: data[offset+1] >> 4}}
+				operands[i] = Operand{Type: Reg, Value: &RegOperand{RegNum: data[offset+1] & 0x3F, Size: data[offset+1] >> 6}}
 				offset += 2
 			case byte(DMem):
 				data = append(data, mem.ReadMemory(*pc+uint32(offset+1)))

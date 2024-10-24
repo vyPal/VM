@@ -8,6 +8,7 @@ import (
 
 type Bytecode struct {
 	MagicNumber  uint32
+	Version      uint32
 	SectorCount  uint8
 	StartAddress uint32
 	Sectors      []BCSector
@@ -23,6 +24,7 @@ func NewBytecode(magicNumber uint32) *Bytecode {
 	return &Bytecode{
 		MagicNumber: magicNumber,
 		SectorCount: 0,
+		Version:     2,
 		Sectors:     []BCSector{},
 	}
 }
@@ -55,6 +57,11 @@ func ProgramToBytecode(program *Parser) *Bytecode {
 func EncodeBytecode(bc *Bytecode) ([]byte, error) {
 	buffer := new(bytes.Buffer)
 	err := binary.Write(buffer, binary.LittleEndian, bc.MagicNumber)
+	if err != nil {
+		return nil, err
+	}
+
+	err = binary.Write(buffer, binary.LittleEndian, bc.Version)
 	if err != nil {
 		return nil, err
 	}
@@ -100,6 +107,15 @@ func DecodeBytecode(data []byte) (*Bytecode, error) {
 
 	if bc.MagicNumber != 0x736F6265 {
 		return nil, fmt.Errorf("Invalid magic number")
+	}
+
+	err = binary.Read(buffer, binary.LittleEndian, &bc.Version)
+	if err != nil {
+		return nil, err
+	}
+
+	if bc.Version != NewBytecode(0).Version {
+		return nil, fmt.Errorf("This bytecode was generated for a different version of the VM")
 	}
 
 	sectorCount, err := buffer.ReadByte()

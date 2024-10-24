@@ -1,11 +1,11 @@
 package main
 
 import (
+	"encoding/binary"
 	"flag"
 	"fmt"
 	"log"
 	"os"
-	"slices"
 	"strings"
 	"time"
 
@@ -110,53 +110,72 @@ func main() {
 
 	regDump := widgets.NewParagraph()
 	regDump.Title = "Reg"
-	regDump.SetRect(42, 0, 57, 10)
+	regDump.SetRect(42, 0, 72, 10)
 
 	simInfo := widgets.NewParagraph()
 	simInfo.Title = "Sim Info"
-	simInfo.Text = fmt.Sprintf("Frequency: %s", DurationToFrequency(simulationDelay))
-	simInfo.SetRect(57, 0, 77, 10)
+	simInfo.SetRect(72, 0, 91, 10)
 
 	memoryWindow := widgets.NewParagraph()
 	memoryWindow.Title = "Program"
-	memoryWindow.SetRect(42, 10, 61, 27)
+	memoryWindow.SetRect(42, 10, 74, 27)
 
 	accessWindow := widgets.NewParagraph()
 	accessWindow.Title = "Access"
-	accessWindow.SetRect(61, 10, 77, 27)
+	accessWindow.SetRect(74, 10, 91, 27)
 
 	stackWindow := widgets.NewParagraph()
 	stackWindow.Title = "Stack"
-	stackWindow.SetRect(77, 0, 95, 27)
+	stackWindow.SetRect(91, 0, 101, 27)
 
-	ui.Render(video, regDump, simInfo, memoryWindow, accessWindow, stackWindow)
+	heapWindow := widgets.NewParagraph()
+	heapWindow.Title = "Heap"
+	heapWindow.SetRect(101, 0, 111, 27)
+
+	ui.Render(video, regDump, simInfo, memoryWindow, accessWindow, stackWindow, heapWindow)
 
 	run := false
 
 	uiEvents := ui.PollEvents()
 	ticker := time.NewTicker(simulationDelay)
+	isEscaped := true
+
 	for {
 		select {
 		case e := <-uiEvents:
 			switch e.ID {
+			case "<C-<Backspace>>":
+				isEscaped = !isEscaped
 			case "q", "<C-c>":
-				return
-			case "+":
-				simulationDelay /= 10
-				ticker.Reset(simulationDelay)
-			case "-":
-				simulationDelay *= 10
-				ticker.Reset(simulationDelay)
-			case "s":
-				c.Step()
-			case "r":
-				run = true
-			case "p":
-				run = false
-			case "c":
-				run = false
-				c.Reset()
-				c.LoadProgram(bc)
+				if isEscaped {
+					return
+				} else {
+					c.InputQueue <- e.ID
+				}
+
+			default:
+				if isEscaped {
+					switch e.ID {
+					case "+":
+						simulationDelay /= 10
+						ticker.Reset(simulationDelay)
+					case "-":
+						simulationDelay *= 10
+						ticker.Reset(simulationDelay)
+					case "s":
+						c.Step()
+					case "r":
+						run = true
+					case "p":
+						run = false
+					case "c":
+						run = false
+						c.Reset()
+						c.LoadProgram(bc)
+					}
+				} else {
+					c.InputQueue <- e.ID
+				}
 			}
 		case <-ticker.C:
 			if run {
@@ -172,19 +191,32 @@ func main() {
 			}
 
 			regDump.Text = ""
-			for i, v := range c.Registers {
-				regDump.Text += fmt.Sprintf("R%d: %08x\n", i, v)
+			for i, v := range c.Registers[:8] {
+				regDump.Text += fmt.Sprintf("R%d: %08x | R%d: %08x\n", i, v, i+8, c.Registers[i+8])
 			}
 
-			simInfo.Text = fmt.Sprintf("Frequency: %s\nHalted: %t\nRunning: %t\n\nStep: <s>\nRun: <r>\nPause: <p>\nClear: <c>", DurationToFrequency(simulationDelay), c.Halted, run)
+			simInfo.Text = fmt.Sprintf("Frequency: %s\nHalted: %t\nRunning: %t\nEscaped: %t\n\nPC: %08x\nSP: %08x\nHP: %08x", DurationToFrequency(simulationDelay), c.Halted, run, isEscaped, c.Registers[16], c.Registers[17], c.Registers[18])
 
-			memoryWindow.Text = drawMemoryWindow(c.MemoryManager, c.PC)
+			memoryWindow.Text = drawMemoryWindow(c.MemoryManager, c.Registers[16])
 			accessWindow.Text = drawAccessWindow(c.MemoryManager, c.LastAccessedAddress)
 			stackWindow.Text = ""
-			for _, v := range slices.Backward(c.MemoryManager.ReadMemoryN(c.MemoryManager.VirtualStackPtr, int(c.MemoryManager.VirtualStackEnd-c.MemoryManager.VirtualStackPtr))) {
-				stackWindow.Text += fmt.Sprintf("%04x\n", v)
+			stackMemory := c.MemoryManager.ReadMemoryN(c.Registers[17], int(c.MemoryManager.VirtualStackEnd-c.Registers[17]))
+			for i := 0; i < len(stackMemory); i += 4 {
+				if i+4 <= len(stackMemory) {
+					v := binary.LittleEndian.Uint32(stackMemory[i : i+4])
+					stackWindow.Text += fmt.Sprintf("%08x\n", v)
+				}
 			}
-			ui.Render(video, regDump, simInfo, memoryWindow, accessWindow, stackWindow)
+
+			heapWindow.Text = ""
+			heapMemory := c.MemoryManager.ReadMemoryN(c.MemoryManager.VirtualHeapStart, int(c.Registers[18]))
+			for i := 0; i < len(heapMemory); i += 4 {
+				if i+4 <= len(heapMemory) {
+					v := binary.LittleEndian.Uint32(heapMemory[i : i+4])
+					heapWindow.Text += fmt.Sprintf("%08x\n", v)
+				}
+			}
+			ui.Render(video, regDump, simInfo, memoryWindow, accessWindow, stackWindow, heapWindow)
 		}
 	}
 }

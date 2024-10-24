@@ -4,6 +4,10 @@
   rt2 DB "rt2.bin", 0
 .TEXT
 ORG 0x80000000
+_start:
+  LD R0 int_test
+  ST [0x88000001] R0
+
   LD R1 loading
   CALL [print]
 
@@ -18,3 +22,11 @@ ORG 0x80000000
   CALL [R2]
 
   HLT
+
+; interrupt handler
+int_test:
+  LD R14 0x1234
+  AND R15 0xFF
+  ST [0xFFFFF0F0] R15B
+  LD R12 R15
+  RET

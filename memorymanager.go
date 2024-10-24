@@ -9,6 +9,8 @@ import (
 const (
 	PageSize  = 4096
 	PageCount = 0x80000
+	IVTStart  = 0x88000000
+	IVTEnd    = 0x880003FF
 	RAMStart  = 0x00000000
 	RAMEnd    = 0x7FFFFFFF
 	ROMStart  = 0x80000000
@@ -26,30 +28,32 @@ type ProgramInfo struct {
 type ProgramInfoSector struct {
 	StartAddress uint32
 	Bytecode     []byte
+	IsStart      bool
 }
 
 type MemoryManager struct {
 	Memory           *Memory
+	cpu              *CPU
 	Programs         []*ProgramInfo
 	PageTable        map[uint32]uint32
 	FreeFrames       []uint32
 	VirtualStackEnd  uint32
-	VirtualStackPtr  uint32
 	VirtualHeapStart uint32
-	VirtualHeapPtr   uint32
 }
 
-func NewMemoryManager(memory *Memory) *MemoryManager {
+func NewMemoryManager(cpu *CPU, memory *Memory) *MemoryManager {
 	mm := &MemoryManager{
 		Memory:           memory,
+		cpu:              cpu,
 		Programs:         []*ProgramInfo{},
 		PageTable:        make(map[uint32]uint32),
 		FreeFrames:       []uint32{},
 		VirtualStackEnd:  0x7FFFFFFF,
-		VirtualStackPtr:  0x7FFFFFFF,
 		VirtualHeapStart: 0x00000000,
-		VirtualHeapPtr:   0x00000000,
 	}
+
+	mm.cpu.Registers[17] = mm.VirtualStackEnd
+	mm.cpu.Registers[18] = mm.VirtualHeapStart
 
 	for i := uint32(0); i < PageCount; i++ {
 		mm.FreeFrames = append(mm.FreeFrames, i)
@@ -89,6 +93,8 @@ func (mm *MemoryManager) TranslateAddress(virtualAddr uint32) (uint32, error) {
 	if virtualAddr >= ROMStart || virtualAddr <= ROMEnd {
 		return virtualAddr, nil
 	} else if virtualAddr >= VRAMStart || virtualAddr <= VRAMEnd {
+		return virtualAddr, nil
+	} else if virtualAddr >= IVTStart || virtualAddr <= IVTEnd {
 		return virtualAddr, nil
 	}
 	virtualPageNum := virtualAddr / PageSize
@@ -204,39 +210,39 @@ func (mm *MemoryManager) WriteNMemory(addr uint32, data []byte) error {
 }
 
 func (mm *MemoryManager) Push(value uint32) {
-	if mm.VirtualStackPtr-4 < mm.VirtualHeapPtr {
+	if mm.cpu.Registers[17]-4 < mm.cpu.Registers[18] {
 		if err := mm.GrowStack(); err != nil {
 			panic(err)
 		}
 	}
 
-	mm.VirtualStackPtr -= 4
+	mm.cpu.Registers[17] -= 4
 
-	if err := mm.MapVirtualToPhysical(mm.VirtualStackPtr); err != nil {
+	if err := mm.MapVirtualToPhysical(mm.cpu.Registers[17]); err != nil {
 		panic(err)
 	}
 
 	valueBytes := make([]byte, 4)
 	binary.LittleEndian.PutUint32(valueBytes, value)
-	err := mm.WriteNMemory(mm.VirtualStackPtr, valueBytes)
+	err := mm.WriteNMemory(mm.cpu.Registers[17], valueBytes)
 	if err != nil {
 		panic(err)
 	}
 }
 
 func (mm *MemoryManager) Pop() uint32 {
-	if mm.VirtualStackPtr >= mm.VirtualStackEnd {
+	if mm.cpu.Registers[17] >= mm.VirtualStackEnd {
 		panic("stack underflow")
 	}
 
-	valueBytes, err := mm.ReadNMemory(mm.VirtualStackPtr, 4)
+	valueBytes, err := mm.ReadNMemory(mm.cpu.Registers[17], 4)
 	if err != nil {
 		panic(err)
 	}
 
 	value := binary.LittleEndian.Uint32(valueBytes)
 
-	mm.VirtualStackPtr += 4
+	mm.cpu.Registers[17] += 4
 
 	mm.TryShrinkStack()
 
@@ -245,39 +251,29 @@ func (mm *MemoryManager) Pop() uint32 {
 
 func (mm *MemoryManager) Malloc(size uint32) (uint32, error) {
 	alignedSize := (size + 3) & ^uint32(3)
-	startAddr := mm.VirtualHeapPtr
+	startAddr := mm.cpu.Registers[18]
 	endAddr := startAddr + alignedSize
 
-	for endAddr > mm.VirtualStackPtr {
+	for endAddr > mm.cpu.Registers[18] {
 		if err := mm.GrowHeap(); err != nil {
 			return 0, err
 		}
 	}
 
-	for addr := startAddr; addr < endAddr; addr += PageSize {
-		if err := mm.MapVirtualToPhysical(addr); err != nil {
-			for freeAddr := startAddr; freeAddr < addr; freeAddr += PageSize {
-				mm.Free(freeAddr)
-			}
-			return 0, err
-		}
-	}
-
-	mm.VirtualHeapPtr = endAddr
 	return startAddr, nil
 }
 
-func (mm *MemoryManager) Free(addr uint32) {
-	pageNum := addr / PageSize
-	if physicalPageIndex, exists := mm.PageTable[pageNum]; exists {
-		delete(mm.PageTable, pageNum)
-		mm.FreeFrame(physicalPageIndex)
-	}
+func (mm *MemoryManager) Free(addr uint32, size uint32) {
+	alignedSize := (size + 3) & ^uint32(3)
+	startAddr := addr
+	endAddr := startAddr + alignedSize
 
-	if addr == mm.VirtualHeapPtr-PageSize {
-		for mm.VirtualHeapPtr > mm.VirtualHeapStart &&
-			mm.PageTable[mm.VirtualHeapPtr/PageSize-1] == 0 {
-			mm.VirtualHeapPtr -= PageSize
+	for freeAddr := startAddr; freeAddr < endAddr; freeAddr += PageSize {
+		pageNum := freeAddr / PageSize
+		if physicalPageIndex, exists := mm.PageTable[pageNum]; exists {
+			mm.WriteNMemory(freeAddr, make([]byte, PageSize))
+			delete(mm.PageTable, pageNum)
+			mm.FreeFrame(physicalPageIndex)
 		}
 	}
 
@@ -285,8 +281,8 @@ func (mm *MemoryManager) Free(addr uint32) {
 }
 
 func (mm *MemoryManager) GrowStack() error {
-	newStackPtr := mm.VirtualStackPtr - PageSize
-	if newStackPtr <= mm.VirtualHeapPtr {
+	newStackPtr := mm.cpu.Registers[17] - PageSize
+	if newStackPtr <= mm.cpu.Registers[18] {
 		return errors.New("cannot grow stack: collision with heap")
 	}
 
@@ -294,13 +290,13 @@ func (mm *MemoryManager) GrowStack() error {
 		return err
 	}
 
-	mm.VirtualStackPtr = newStackPtr
+	mm.cpu.Registers[17] = newStackPtr
 	return nil
 }
 
 func (mm *MemoryManager) TryShrinkStack() {
-	if (mm.VirtualStackPtr%PageSize == 0) && (mm.VirtualStackPtr < mm.VirtualStackEnd) {
-		topPageStart := mm.VirtualStackPtr
+	if (mm.cpu.Registers[17]%PageSize == 0) && (mm.cpu.Registers[17] < mm.VirtualStackEnd) {
+		topPageStart := mm.cpu.Registers[17]
 		topPageEnd := topPageStart + PageSize
 
 		isEmpty := true
@@ -314,29 +310,29 @@ func (mm *MemoryManager) TryShrinkStack() {
 
 		if isEmpty {
 			mm.UnmapPage(topPageStart)
-			mm.VirtualStackPtr += PageSize
+			mm.cpu.Registers[17] += PageSize
 		}
 	}
 }
 
 func (mm *MemoryManager) GrowHeap() error {
-	newHeapPtr := mm.VirtualHeapPtr + PageSize
-	if newHeapPtr >= mm.VirtualStackPtr {
+	newHeapPtr := mm.cpu.Registers[18] + PageSize
+	if newHeapPtr >= mm.cpu.Registers[17] {
 		return errors.New("cannot grow heap: collision with stack")
 	}
 
-	if err := mm.MapVirtualToPhysical(mm.VirtualHeapPtr); err != nil {
+	if err := mm.MapVirtualToPhysical(mm.cpu.Registers[18]); err != nil {
 		return err
 	}
 
-	mm.VirtualHeapPtr = newHeapPtr
+	mm.cpu.Registers[18] = newHeapPtr
 	return nil
 }
 
 func (mm *MemoryManager) TryShrinkHeap() {
-	if (mm.VirtualHeapPtr%PageSize == 0) && (mm.VirtualHeapPtr > mm.VirtualHeapStart) {
-		topPageStart := mm.VirtualHeapPtr - PageSize
-		topPageEnd := mm.VirtualHeapPtr
+	if (mm.cpu.Registers[18]%PageSize == 0) && (mm.cpu.Registers[18] > mm.VirtualHeapStart) {
+		topPageStart := mm.cpu.Registers[18] - PageSize
+		topPageEnd := mm.cpu.Registers[18]
 
 		isEmpty := true
 		for addr := topPageStart; addr < topPageEnd; addr += 4 {
@@ -349,7 +345,7 @@ func (mm *MemoryManager) TryShrinkHeap() {
 
 		if isEmpty {
 			mm.UnmapPage(topPageStart)
-			mm.VirtualHeapPtr -= PageSize
+			mm.cpu.Registers[18] -= PageSize
 		}
 	}
 }
@@ -365,6 +361,9 @@ func (mm *MemoryManager) UnmapPage(addr uint32) {
 func (mm *MemoryManager) ExecuteJump(currentPC uint32, jumpAddr uint32) uint32 {
 	for _, info := range mm.Programs {
 		if currentPC >= info.StartAddress && currentPC < info.StartAddress+info.Size {
+			if jumpAddr >= RAMEnd {
+				return jumpAddr
+			}
 			translatedAddr, err := mm.TranslateAddress(info.StartAddress + jumpAddr)
 			if err != nil {
 				panic(err)
@@ -386,10 +385,11 @@ func (mm *MemoryManager) NewProgram() *ProgramInfo {
 	return program
 }
 
-func (mm *MemoryManager) AddSector(programInfo *ProgramInfo, baseAddress uint32, program []byte) {
+func (mm *MemoryManager) AddSector(programInfo *ProgramInfo, baseAddress uint32, program []byte, isStart bool) {
 	sector := ProgramInfoSector{
 		StartAddress: baseAddress,
 		Bytecode:     program,
+		IsStart:      isStart,
 	}
 	programInfo.Sectors = append(programInfo.Sectors, sector)
 }
@@ -408,6 +408,9 @@ func (mm *MemoryManager) LoadProgram(programInfo *ProgramInfo) uint32 {
 	programInfo.StartAddress = startAddr
 
 	for _, sector := range programInfo.Sectors {
+		if sector.IsStart {
+			programInfo.StartAddress = startAddr
+		}
 		mm.WriteNMemory(startAddr, sector.Bytecode)
 		programInfo.Size += uint32(len(sector.Bytecode))
 		startAddr += uint32(len(sector.Bytecode))
@@ -422,9 +425,7 @@ func (mm *MemoryManager) UnloadProgram(startAddr uint32) error {
 		return errors.New("program not found")
 	}
 
-	for addr := startAddr; addr < startAddr+programInfo.Size; addr += PageSize {
-		mm.Free(addr)
-	}
+	mm.Free(programInfo.StartAddress, programInfo.Size)
 
 	mm.Programs[startAddr] = nil
 
