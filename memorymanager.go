@@ -358,23 +358,23 @@ func (mm *MemoryManager) UnmapPage(addr uint32) {
 	}
 }
 
-func (mm *MemoryManager) ExecuteJump(currentPC uint32, jumpAddr uint32) uint32 {
+func (mm *MemoryManager) GetAbsoluteAddress(currentPC uint32, addr uint32) uint32 {
 	for _, info := range mm.Programs {
-		if currentPC >= info.StartAddress && currentPC < info.StartAddress+info.Size {
-			if jumpAddr >= RAMEnd {
-				return jumpAddr
+		if currentPC >= info.StartAddress && currentPC < info.StartAddress+info.Size && addr < PageSize {
+			if addr >= RAMEnd {
+				return addr
 			}
-			translatedAddr, err := mm.TranslateAddress(info.StartAddress + jumpAddr)
+			translatedAddr, err := mm.TranslateAddress(info.StartAddress + addr)
 			if err != nil {
 				panic(err)
 			}
 			if translatedAddr == 0xFFFFFFFF {
-				panic("invalid jump address")
+				panic("invalid address")
 			}
 			return translatedAddr
 		}
 	}
-	return jumpAddr
+	return addr
 }
 
 func (mm *MemoryManager) NewProgram() *ProgramInfo {

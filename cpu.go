@@ -47,6 +47,17 @@ func (c *CPU) handleKeyCombo(key string) []string {
 		keyCombo := strings.Trim(key, "<>")
 		parts := strings.Split(keyCombo, "-")
 
+		if len(parts) == 1 {
+			switch parts[0] {
+			case "Space":
+				return []string{"KeyPress "}
+			case "Enter":
+				return []string{"KeyPress\n"}
+			case "Tab":
+				return []string{"KeyPress\t"}
+			}
+		}
+
 		var keyEvents []string
 
 		for _, part := range parts[:len(parts)-1] {
@@ -78,42 +89,14 @@ func (c *CPU) KeyboardInputLoop() {
 		case key := <-c.InputQueue:
 			keyEvents := c.handleKeyCombo(key)
 
-			select {
-			case <-c.InterruptReturned:
-				if len(inputBuffer) == 0 {
-					for _, keyEvent := range keyEvents {
-						c.processKeyEvent(keyEvent)
-					}
-				} else {
-					for len(inputBuffer) > 0 {
-						bufferedKey := inputBuffer[0]
-						inputBuffer = inputBuffer[1:]
-
-						bufferedKeyEvents := c.handleKeyCombo(bufferedKey)
-						for _, keyEvent := range bufferedKeyEvents {
-							c.processKeyEvent(keyEvent)
-						}
-					}
-
-					for _, keyEvent := range keyEvents {
-						c.processKeyEvent(keyEvent)
-					}
-				}
-			default:
-				inputBuffer = append(inputBuffer, key)
-			}
+			inputBuffer = append(inputBuffer, keyEvents...)
 
 		case <-c.InterruptReturned:
 			if len(inputBuffer) > 0 {
-				for len(inputBuffer) > 0 {
-					bufferedKey := inputBuffer[0]
-					inputBuffer = inputBuffer[1:]
+				bufferedKey := inputBuffer[0]
+				inputBuffer = inputBuffer[1:]
 
-					bufferedKeyEvents := c.handleKeyCombo(bufferedKey)
-					for _, keyEvent := range bufferedKeyEvents {
-						c.processKeyEvent(keyEvent)
-					}
-				}
+				c.processKeyEvent(bufferedKey)
 			}
 		}
 	}
@@ -168,14 +151,14 @@ func (c *CPU) Step() {
 		c.InterruptProcessing = true
 		c.OriginalPC = c.Registers[16]
 		c.MemoryManager.Push(c.Registers[16])
-		c.Registers[16] = c.MemoryManager.ReadMemoryDWord(0x88000000 + c.InterruptVector)
-		if c.Registers[16] == 0 {
+		if c.MemoryManager.ReadMemoryDWord(0x88000000+c.InterruptVector*4) == 0 {
 			c.Registers[16] = c.MemoryManager.Pop()
 			c.InterruptProcessing = false
 		} else {
-			c.Registers[15] = c.InterruptData
+			c.Registers[16] = c.MemoryManager.ReadMemoryDWord(0x88000000 + c.InterruptVector*4)
+			c.Registers[10] = c.InterruptData
 		}
-	} else {
+	} else if !c.InterruptProcessing {
 		c.InterruptReturned <- true
 	}
 	instr := DecodeInstruction(c.MemoryManager, &c.Registers[16])

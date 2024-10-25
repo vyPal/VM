@@ -547,15 +547,30 @@ func (p *Parser) ParseOperand(arg string, operand *Operand, opName string) {
 			id := strings.TrimSuffix(strings.TrimSuffix(arg[1:], "B"), "L")
 			parsedValue, err := strconv.ParseUint(id, 10, 32)
 			if err != nil {
-				panic(arg + " is not a valid register for " + opName + ": " + err.Error())
+				detectedType = Imm
+				parsedValue, err := strconv.ParseUint(arg, 0, 32)
+				if err != nil {
+					operand.Value = &ImmOperand{}
+					p.CurrentSector.PostParse = append(p.CurrentSector.PostParse, func() {
+						if val, ok := p.Labels[arg]; ok {
+							operand.Value.(*ImmOperand).Value = val
+						} else if val, ok := p.DataByName(arg); ok {
+							operand.Value.(*ImmOperand).Value = val.Address
+						} else {
+							panic("Unknown label: " + arg)
+						}
+					})
+				}
+				operand.Value = &ImmOperand{Value: uint32(parsedValue)}
+			} else {
+				size := 0x0
+				if strings.HasSuffix(arg, "B") {
+					size = 0x2
+				} else if strings.HasSuffix(arg, "L") {
+					size = 0x1
+				}
+				operand.Value = &RegOperand{RegNum: byte(parsedValue), Size: byte(size)}
 			}
-			size := 0x0
-			if strings.HasSuffix(arg, "B") {
-				size = 0x2
-			} else if strings.HasSuffix(arg, "L") {
-				size = 0x1
-			}
-			operand.Value = &RegOperand{RegNum: byte(parsedValue), Size: byte(size)}
 		}
 	} else {
 		detectedType = Imm
