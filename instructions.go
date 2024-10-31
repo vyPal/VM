@@ -1357,6 +1357,28 @@ var instructionSet = map[uint8]*Instruction{
 			{AllowedTypes: []OperandType{Reg, DMem, IMem, Imm}}, // B - Handler
 		},
 	},
+	0x27: {
+		Opcode: 0x27,
+		Name: "RTA",
+		Execute: func(cpu *CPU, operands []Operand) {
+			switch operands[0].Type {
+				case Reg:
+					cpu.Registers[operands[1].Value.(*RegOperand).RegNum] = cpu.MemoryManager.GetAbsoluteAddress(cpu.Registers[16], cpu.Registers[operands[0].Value.(*RegOperand).RegNum])
+				case DMem:
+					cpu.LastAccessedAddress = operands[0].Value.(*DMemOperand).ComputeAddress(cpu)
+					cpu.Registers[operands[1].Value.(*RegOperand).RegNum] = cpu.MemoryManager.GetAbsoluteAddress(cpu.Registers[16], cpu.MemoryManager.ReadMemoryDWord(operands[0].Value.(*DMemOperand).ComputeAddress(cpu)))
+				case IMem:
+					cpu.LastAccessedAddress = cpu.MemoryManager.ReadMemoryDWord(operands[0].Value.(*IMemOperand).ComputeAddress(cpu))
+					cpu.Registers[operands[1].Value.(*RegOperand).RegNum] = cpu.MemoryManager.GetAbsoluteAddress(cpu.Registers[16], cpu.MemoryManager.ReadMemoryDWord(cpu.MemoryManager.ReadMemoryDWord(operands[0].Value.(*IMemOperand).ComputeAddress(cpu))))
+				case Imm:
+					cpu.Registers[operands[1].Value.(*RegOperand).RegNum] = cpu.MemoryManager.GetAbsoluteAddress(cpu.Registers[16], operands[0].Value.(*ImmOperand).Value)
+			}
+		},
+		Operands: []Operand{
+			{AllowedTypes: []OperandType{Reg, DMem, IMem, Imm}}, // A - Address to translare
+			{Type: Reg}, // B - Dest
+		},
+	},
 }
 
 func EncodeInstruction(inst *Instruction) []byte {
