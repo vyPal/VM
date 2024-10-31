@@ -3,8 +3,12 @@
   not_found DB "Binary not found.", 0
 
 .TEXT
-  MALLOC 0x400 R3
+  MALLOC 0x15 R3
   LD R4 0
+  LD R8 0x12
+  JMP [start]
+prep:
+  LD R8 0x3A
 start:
   HANDLE 0x1 keyboard_event
   CALL [clear]
@@ -28,29 +32,36 @@ failed_to_load:
   POP R3
   POP R2
   POP R1
-  JMP [start]
+  JMP [prep]
 
 exec:
   PUSH R1
   PUSH R2
   PUSH R3
+  PUSH R4
+  PUSH R8
   OPEN R1 [R3]
   CMP R1 0xFFFFFFFF
   JEQ [failed_to_load]
   LOADBIN R1 R2
   CLOSE R1
+  LD R8 R4
+  ADD R8 2
+  CALL [clear]
   CALL [R2]
+  POP R8
+  POP R4
   POP R3
   POP R2
   POP R1
   CALL [clear_buf]
-  JMP [start]
+  JMP [prep]
 
 clear:
   LD R0 0
   LD R1 0
 clear_loop:
-  CMP R0 0x3A
+  CMP R0 R8
   JEQ [return]
   ST [R0 + 0xFFFFF000] R1B
   INC R0
@@ -72,7 +83,8 @@ return:
 clear_buf:
   LD R5 R4
   ADD R5 R3
-  LD [R5] 0
+  LD R7 0
+  ST [R5] R7
   CMP R4 0
   JEQ [return]
   DEC R4
